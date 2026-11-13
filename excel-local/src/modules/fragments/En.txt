@@ -1,0 +1,73 @@
+Public Function GenererRapport8D(ByVal huitd As C8D, _
+                                 ByVal nc As CNonConformite, _
+                                 ByVal client As CClient) As String
+    Dim wb As Workbook, ws As Worksheet
+    Dim tplPath As String
+    tplPath = TemplatePath() & "Rapport_8D.xlsx"
+
+    If Dir(tplPath) = "" Then
+        Err.Raise vbObjectError + 3002, "M_Report", _
+            "Template introuvable : " & tplPath
+    End If
+
+    Set wb = Workbooks.Open(tplPath, ReadOnly:=False)
+    Set ws = wb.Worksheets("Rapport8D")
+
+    ' En-tête
+    ws.Range("R8D_Numero").Value = huitd.Numero
+    ws.Range("R8D_NcId").Value = nc.Numero
+    If Not client Is Nothing Then
+        ws.Range("R8D_ClientNom").Value = client.RaisonSociale
+        ws.Range("R8D_ClientCode").Value = client.Code
+    End If
+    ws.Range("R8D_Statut").Value = huitd.Statut
+    ws.Range("R8D_Etape").Value = huitd.EtapeCourante()
+
+    ' D1
+    ws.Range("R8D_D1_Champion").Value = huitd.D1_Champion
+    ws.Range("R8D_D1_Leader").Value = huitd.D1_Leader
+    ws.Range("R8D_D1_Membres").Value = huitd.D1_Membres
+    ' D2
+    ws.Range("R8D_D2_Description").Value = huitd.D2_Description
+    If IsDate(huitd.D2_Date) Then ws.Range("R8D_D2_Date").Value = FormatIsoDate(huitd.D2_Date)
+    ws.Range("R8D_D2_5W2H").Value = huitd.D2_5W2H
+    ' D3
+    ws.Range("R8D_D3_Actions").Value = huitd.D3_Actions
+    If IsDate(huitd.D3_Date) Then ws.Range("R8D_D3_Date").Value = FormatIsoDate(huitd.D3_Date)
+    ws.Range("R8D_D3_Verification").Value = huitd.D3_Verification
+    ' D4
+    ws.Range("R8D_D4_Ishikawa").Value = huitd.D4_Ishikawa
+    ws.Range("R8D_D4_5Pourquoi").Value = huitd.D4_5Pourquoi
+    ws.Range("R8D_D4_CauseRacine").Value = huitd.D4_CauseRacine
+    ws.Range("R8D_D4_CauseEchappee").Value = huitd.D4_CauseEchappee
+    If IsDate(huitd.D4_Date) Then ws.Range("R8D_D4_Date").Value = FormatIsoDate(huitd.D4_Date)
+    ' D5
+    ws.Range("R8D_D5_Actions").Value = huitd.D5_Actions
+    ws.Range("R8D_D5_Responsable").Value = huitd.D5_Responsable
+    If IsDate(huitd.D5_Date) Then ws.Range("R8D_D5_Date").Value = FormatIsoDate(huitd.D5_Date)
+    ' D6
+    ws.Range("R8D_D6_Actions").Value = huitd.D6_Actions
+    If IsDate(huitd.D6_Date) Then ws.Range("R8D_D6_Date").Value = FormatIsoDate(huitd.D6_Date)
+    ws.Range("R8D_D6_Validation").Value = huitd.D6_Validation
+    ' D7
+    ws.Range("R8D_D7_Actions").Value = huitd.D7_Actions
+    If IsDate(huitd.D7_Date) Then ws.Range("R8D_D7_Date").Value = FormatIsoDate(huitd.D7_Date)
+    ' D8
+    If IsDate(huitd.D8_Date) Then ws.Range("R8D_D8_Date").Value = FormatIsoDate(huitd.D8_Date)
+    ws.Range("R8D_D8_Bilan").Value = huitd.D8_Bilan
+
+    ' Sauvegarde horodatée
+    Dim outPath As String
+    outPath = AppDataPath() & "reports\"
+    If Dir(outPath, vbDirectory) = "" Then MkDir outPath
+    outPath = outPath & "Rapport_8D_" & huitd.Numero & "_" & _
+        Format$(Now, "yyyymmdd_hhnnss") & ".xlsx"
+
+    Application.DisplayAlerts = False
+    wb.SaveAs outPath, FileFormat:=xlOpenXMLWorkbook
+    wb.Close SaveChanges:=False
+    Application.DisplayAlerts = True
+
+    Log LogInfo, "M_Report", "Rapport 8D généré : " & outPath
+    GenererRapport8D = outPath
+End Function

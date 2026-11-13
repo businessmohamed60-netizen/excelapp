@@ -1,0 +1,96 @@
+Option Explicit
+' Contrôles : lstConstats, cboChapitre, cboClassification, txtDescription,
+'             txtPreuve, cmdNew, cmdSave, cmdDelete, cmdClose, lblStatus
+
+Private m_AuditId As String, m_Constat As CConstat
+Private m_Constats As Object, m_FilteredKeys As Object
+
+Public Property Let AuditCourant(ByVal id As String): m_AuditId = id: End Property
+
+Private Sub UserForm_Initialize()
+    Caption = "Constats d'audit"
+    cmdNew.Caption = T("btn.new"): cmdSave.Caption = T("btn.save")
+    cmdDelete.Caption = T("btn.delete"): cmdClose.Caption = T("btn.close")
+    InitChapitres: InitClassifications
+    With lstConstats: .ColumnCount = 3: .ColumnWidths = "70;80;260": End With
+    RefreshList
+End Sub
+
+Private Sub InitChapitres()
+    With cboChapitre
+        .Clear: .AddItem "4. Contexte": .AddItem "5. Leadership": .AddItem "6. Planification"
+        .AddItem "7. Support": .AddItem "8. Réalisation": .AddItem "9. Évaluation performance"
+        .AddItem "10. Amélioration": .AddItem "8.5.1 Contrôle production"
+        .AddItem "8.5.6 Maîtrise des modifications": .AddItem "9.2.2.3 IATF — Audit processus"
+        .AddItem "7.1.5.2.1 IATF — Étalonnage": .AddItem "8.5.1.5 IATF — TPM"
+    End With
+End Sub
+
+Private Sub InitClassifications()
+    With cboClassification
+        .Clear: .AddItem "Majeur": .AddItem "Mineur": .AddItem "Observation": .AddItem "OFI"
+    End With
+End Sub
+
+Private Sub RefreshList()
+    Set m_Constats = g_CollMgr.LoadCollection("constats")
+    Set m_FilteredKeys = CreateObject("Scripting.Dictionary")
+    lstConstats.Clear
+    Dim k As Variant
+    For Each k In m_Constats.Keys
+        If m_Constats(k).AuditId = m_AuditId Then
+            m_FilteredKeys.Add k, k
+            lstConstats.AddItem m_Constats(k).Chapitre
+            lstConstats.List(lstConstats.ListCount - 1, 1) = m_Constats(k).Classification
+            lstConstats.List(lstConstats.ListCount - 1, 2) = m_Constats(k).Description
+        End If
+    Next k
+    lblStatus.Caption = m_FilteredKeys.Count & " constat(s)"
+End Sub
+
+Private Sub lstConstats_Click()
+    Dim idx As Long: idx = lstConstats.ListIndex
+    If idx < 0 Then Exit Sub
+    Dim k As Variant, i As Long
+    i = 0
+    For Each k In m_FilteredKeys.Keys
+        If i = idx Then Set m_Constat = m_Constats(k): LoadForm: Exit Sub
+        i = i + 1
+    Next k
+End Sub
+
+Private Sub LoadForm()
+    If m_Constat Is Nothing Then Exit Sub
+    cboChapitre.Text = m_Constat.Chapitre: cboClassification.Text = m_Constat.Classification
+    txtDescription.Text = m_Constat.Description: txtPreuve.Text = m_Constat.Preuve
+End Sub
+
+Private Sub cmdNew_Click()
+    Set m_Constat = New CConstat: m_Constat.InitNew
+    m_Constat.AuditId = m_AuditId
+    cboChapitre.ListIndex = -1: cboClassification.Text = "Observation"
+    txtDescription.Text = "": txtPreuve.Text = ""
+End Sub
+
+Private Sub cmdSave_Click()
+    On Error GoTo ErrHandler
+    If m_Constat Is Nothing Then Exit Sub
+    If Len(Trim$(txtDescription.Text)) = 0 Then ShowError "Validation", "Description obligatoire.": Exit Sub
+    m_Constat.Chapitre = cboChapitre.Text: m_Constat.Classification = cboClassification.Text
+    m_Constat.Description = txtDescription.Text: m_Constat.Preuve = txtPreuve.Text
+    g_CollMgr.Save m_Constat, "constats": g_CollMgr.InvalidateCache "constats"
+    RefreshList
+    Exit Sub
+ErrHandler:
+    LogEx "FConstat", "cmdSave_Click", Err: ShowError "Sauvegarde", Err.Description
+End Sub
+
+Private Sub cmdDelete_Click()
+    If m_Constat Is Nothing Then Exit Sub
+    If Not PromptYesNo("Suppression", T("msg.confirm_delete")) Then Exit Sub
+    g_CollMgr.DeleteById m_Constat.Id, "constats"
+    g_CollMgr.InvalidateCache "constats"
+    Set m_Constat = Nothing: RefreshList
+End Sub
+
+Private Sub cmdClose_Click(): Unload Me: End Sub

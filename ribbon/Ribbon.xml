@@ -1,0 +1,131 @@
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="Ribbon_OnLoad">
+  <ribbon>
+    <tabs>
+
+      <!-- ============================================= -->
+      <!-- ONGLET 1 : IATF Assistant (Tableau de bord)   -->
+      <!-- ============================================= -->
+      <tab id="tabIATF" label="IATF Assistant" insertBeforeMso="TabHome">
+        <group id="grpDash" label="Tableau de bord">
+          <button id="btnMain" label="Ouvrir" size="large" imageMso="ChartInsert" onAction="Ribbon_OuvrirDashboard"/>
+        </group>
+        <group id="grpClients" label="Clients &amp; Audits">
+          <button id="btnClients" label="Clients" size="large" imageMso="ContactCard" onAction="Ribbon_OuvrirClients"/>
+          <button id="btnAudits" label="Audits" size="large" imageMso="ReviewAcceptChanges" onAction="Ribbon_OuvrirAudits"/>
+          <button id="btnNC" label="Non-conformites" size="large" imageMso="Warning" onAction="Ribbon_OuvrirNC"/>
+        </group>
+        <group id="grpCore" label="Core Tools">
+          <button id="btnApqp" label="APQP" size="large" imageMso="Diagram" onAction="Ribbon_OuvrirApqp"/>
+          <button id="btnPpap" label="PPAP" size="large" imageMso="PackageForCD" onAction="Ribbon_OuvrirPpap"/>
+          <button id="btnAmdec" label="AMDEC" size="large" imageMso="TableInsert" onAction="Ribbon_OuvrirAmdec"/>
+          <button id="btnSpc" label="SPC" size="large" imageMso="ChartLine" onAction="Ribbon_OuvrirSpc"/>
+          <button id="btnMsa" label="MSA" size="large" imageMso="ChartTypeScatterInsert" onAction="Ribbon_OuvrirMsa"/>
+        </group>
+        <group id="grpOutils" label="Outils">
+          <button id="btnRecherche" label="Recherche" size="large" imageMso="FindDialog" onAction="Ribbon_OuvrirRecherche"/>
+          <button id="btnNotifications" label="Notifications" size="large" imageMso="Bell" onAction="Ribbon_OuvrirNotifications"/>
+        </group>
+        <group id="grpAdmin" label="Administration">
+          <button id="btnSettings" label="Parametres" imageMso="FileProperties" onAction="Ribbon_OuvrirSettings"/>
+          <button id="btnAbout" label="A propos" imageMso="Help" onAction="Ribbon_OuvrirAbout"/>
+        </group>
+      </tab>
+
+      <!-- ============================================= -->
+      <!-- ONGLET 2 : Pilotage                            -->
+      <!-- ============================================= -->
+      <tab id="tabPilotage" label="Pilotage">
+        <group id="grpKpi" label="Indicateurs">
+          <button id="btnKpi" label="Tableau de bord" size="large" onAction="Rb_Kpi"/>
+        </group>
+        <group id="grpProgramme" label="Programme">
+          <button id="btnProgramme" label="Programme annuel" size="large" onAction="Rb_Programme"/>
+        </group>
+        <group id="grpDoc" label="Documentation">
+          <button id="btnDocuments" label="Documents" size="large" onAction="Rb_Documents"/>
+          <button id="btnMatrice" label="Matrice conformite" size="large" onAction="Rb_Matrice"/>
+        </group>
+        <group id="grpRevue" label="Revue">
+          <button id="btnRevue" label="Revue de direction" size="large" onAction="Rb_Revue"/>
+        </group>
+      </tab>
+
+      <!-- ============================================= -->
+      <!-- ONGLET 3 : Risques (AMDEC + Plans de controle)-->
+      <!-- ============================================= -->
+      <tab id="tabRisques" label="Risques">
+        <group id="grpAmdecR" label="AMDEC">
+          <button id="btnAmdecR" label="AMDEC" size="large" onAction="Rb_Amdec"/>
+        </group>
+        <group id="grpPlan" label="Maitrise">
+          <button id="btnPlan" label="Plans de controle" size="large" onAction="Rb_PlanControle"/>
+          <button id="btnCarac" label="Caracteristiques CC/SC" size="large" onAction="Rb_Caracteristiques"/>
+        </group>
+      </tab>
+
+      <!-- ============================================= -->
+      <!-- ONGLET 4 : Metrologie                          -->
+      <!-- ============================================= -->
+      <tab id="tabMetrologie" label="Metrologie">
+        <group id="grpMoyens" label="Moyens de mesure">
+          <button id="btnMoyens" label="Inventaire" size="large" onAction="Rb_Moyens"/>
+          <button id="btnEtalonnages" label="Etalonnages" size="large" onAction="Rb_Etalonnages"/>
+        </group>
+        <group id="grpEtudes" label="Etudes">
+          <button id="btnMsaR" label="MSA / R&amp;R" size="large" onAction="Rb_Msa"/>
+          <button id="btnCapabilite" label="Capabilite" size="large" onAction="Rb_Capabilite"/>
+          <button id="btnCarte" label="Carte de controle" size="large" onAction="Rb_Carte"/>
+        </group>
+      </tab>
+
+      <!-- ============================================= -->
+      <!-- ONGLET 5 : Modules IATF                        -->
+      <!-- ============================================= -->
+      <tab id="tabModules" label="Modules IATF">
+        <group id="grpFournisseurs" label="Fournisseurs">
+          <button id="btnFournisseurs" label="Fournisseurs" size="large" onAction="Rb_Fournisseurs"/>
+          <button id="btnAuditsFourn" label="Audits fournisseurs" size="large" onAction="Rb_AuditsFournisseurs"/>
+        </group>
+        <group id="grpTPM" label="TPM">
+          <button id="btnEquipements" label="Equipements" size="large" onAction="Rb_Equipements"/>
+          <button id="btnMaintenance" label="Maintenance" size="large" onAction="Rb_Maintenance"/>
+        </group>
+        <group id="grpRejets" label="Rejets">
+          <button id="btnRejets" label="Rejets internes" size="large" onAction="Rb_Rejets"/>
+        </group>
+        <group id="grpSurveillance" label="Surveillance">
+          <button id="btnSurveillance" label="Plans de surveillance" size="large" onAction="Rb_Surveillance"/>
+        </group>
+      </tab>
+
+      <!-- ============================================= -->
+      <!-- ONGLET 6 : Administration                     -->
+      <!-- ============================================= -->
+      <tab id="tabAdmin" label="Administration">
+        <group id="grpCollab" label="Collaboration">
+          <button id="btnNotifAdmin" label="Notifications" size="large" onAction="Rb_Notifications"/>
+          <button id="btnParametres" label="Parametres" size="large" onAction="Rb_Parametres"/>
+        </group>
+        <group id="grpDonneesAdmin" label="Donnees">
+          <button id="btnBackup" label="Sauvegarde" size="large" onAction="Rb_Backup"/>
+          <button id="btnJournal" label="Journal d'audit" size="large" onAction="Rb_Journal"/>
+        </group>
+      </tab>
+
+      <!-- ============================================= -->
+      <!-- ONGLET 7 : Donnees (Base de donnees + API)   -->
+      <!-- ============================================= -->
+      <tab id="tabDonnees" label="Donnees">
+        <group id="grpDb" label="Base de donnees">
+          <button id="btnMigration" label="Migration XML vers SQL" size="large" onAction="Rb_Migration"/>
+          <button id="btnMode" label="Mode XML/SQL" size="large" onAction="Rb_Mode"/>
+        </group>
+        <group id="grpApi" label="Integration">
+          <button id="btnApi" label="API REST" size="large" onAction="Rb_Api"/>
+          <button id="btnPowerBi" label="Power BI" size="large" onAction="Rb_PowerBi"/>
+        </group>
+      </tab>
+
+    </tabs>
+  </ribbon>
+</customUI>

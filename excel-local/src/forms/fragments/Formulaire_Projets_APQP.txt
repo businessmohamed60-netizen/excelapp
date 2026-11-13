@@ -1,0 +1,99 @@
+Option Explicit
+' Contrôles : lstProjets, cboClient, txtNomProjet, txtProgramme, txtResponsable,
+'             txtDateLancement, txtSOP, txtPhase1..txtPhase5, cboStatut,
+'             lblAvancement, cmdNew, cmdSave, cmdDelete, cmdClose
+
+Private m_Projets As Object, m_Clients As Object, m_ClientIds As Object, m_Current As CProjetAPQP
+
+Private Sub UserForm_Initialize()
+    Caption = "Projets APQP"
+    cmdNew.Caption = T("btn.new"): cmdSave.Caption = T("btn.save")
+    cmdDelete.Caption = T("btn.delete"): cmdClose.Caption = T("btn.close")
+    With cboStatut: .Clear: .AddItem "En cours": .AddItem "Validé": .AddItem "Annulé": End With
+    LoadClients: RefreshList
+End Sub
+
+Private Sub LoadClients()
+    Set m_Clients = g_CollMgr.LoadCollection("clients")
+    Set m_ClientIds = CreateObject("Scripting.Dictionary")
+    cboClient.Clear
+    Dim k As Variant
+    For Each k In m_Clients.Keys
+        cboClient.AddItem m_Clients(k).DisplayName
+        m_ClientIds.Add m_Clients(k).DisplayName, k
+    Next k
+End Sub
+
+Private Sub RefreshList()
+    Set m_Projets = g_CollMgr.LoadCollection("apqp")
+    lstProjets.Clear
+    Dim k As Variant
+    For Each k In m_Projets.Keys
+        lstProjets.AddItem m_Projets(k).Reference & " | " & m_Projets(k).NomProjet & " (" & m_Projets(k).Avancement & "%)"
+    Next k
+End Sub
+
+Private Sub lstProjets_Click()
+    Dim idx As Long: idx = lstProjets.ListIndex
+    If idx < 0 Then Exit Sub
+    Dim k As Variant, i As Long
+    i = 0
+    For Each k In m_Projets.Keys
+        If i = idx Then Set m_Current = m_Projets(k): LoadForm: Exit Sub
+        i = i + 1
+    Next k
+End Sub
+
+Private Sub LoadForm()
+    If m_Current Is Nothing Then Exit Sub
+    If m_Clients.Exists(m_Current.ClientId) Then cboClient.Text = m_Clients(m_Current.ClientId).DisplayName
+    txtNomProjet.Text = m_Current.NomProjet: txtProgramme.Text = m_Current.Programme
+    txtResponsable.Text = m_Current.Responsable
+    txtDateLancement.Text = FormatIsoDate(m_Current.DateLancement): txtSOP.Text = FormatIsoDate(m_Current.DateCibleSOP)
+    If m_Current.Phase1_Planification > 0 Then txtPhase1.Text = FormatIsoDate(m_Current.Phase1_Planification) Else txtPhase1.Text = ""
+    If m_Current.Phase2_Conception > 0 Then txtPhase2.Text = FormatIsoDate(m_Current.Phase2_Conception) Else txtPhase2.Text = ""
+    If m_Current.Phase3_Industrialisation > 0 Then txtPhase3.Text = FormatIsoDate(m_Current.Phase3_Industrialisation) Else txtPhase3.Text = ""
+    If m_Current.Phase4_Validation > 0 Then txtPhase4.Text = FormatIsoDate(m_Current.Phase4_Validation) Else txtPhase4.Text = ""
+    If m_Current.Phase5_Production > 0 Then txtPhase5.Text = FormatIsoDate(m_Current.Phase5_Production) Else txtPhase5.Text = ""
+    cboStatut.Text = m_Current.Statut
+    lblAvancement.Caption = "Avancement : " & m_Current.Avancement & "%"
+End Sub
+
+Private Sub cmdNew_Click()
+    Set m_Current = New CProjetAPQP: m_Current.InitNew
+    cboClient.ListIndex = -1: txtNomProjet.Text = "": txtProgramme.Text = ""
+    txtResponsable.Text = "": txtDateLancement.Text = FormatIsoDate(Date): txtSOP.Text = FormatIsoDate(Date + 180)
+    txtPhase1.Text = "": txtPhase2.Text = "": txtPhase3.Text = ""
+    txtPhase4.Text = "": txtPhase5.Text = "": cboStatut.Text = "En cours"
+End Sub
+
+Private Sub cmdSave_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    If Not m_ClientIds.Exists(cboClient.Text) Then ShowError "Validation", "Client obligatoire.": Exit Sub
+    m_Current.ClientId = m_ClientIds(cboClient.Text): m_Current.NomProjet = txtNomProjet.Text
+    m_Current.Programme = txtProgramme.Text: m_Current.Responsable = txtResponsable.Text
+    m_Current.DateLancement = ParseIsoDate(txtDateLancement.Text): m_Current.DateCibleSOP = ParseIsoDate(txtSOP.Text)
+    If Len(txtPhase1.Text) > 0 Then m_Current.Phase1_Planification = ParseIsoDate(txtPhase1.Text)
+    If Len(txtPhase2.Text) > 0 Then m_Current.Phase2_Conception = ParseIsoDate(txtPhase2.Text)
+    If Len(txtPhase3.Text) > 0 Then m_Current.Phase3_Industrialisation = ParseIsoDate(txtPhase3.Text)
+    If Len(txtPhase4.Text) > 0 Then m_Current.Phase4_Validation = ParseIsoDate(txtPhase4.Text)
+    If Len(txtPhase5.Text) > 0 Then m_Current.Phase5_Production = ParseIsoDate(txtPhase5.Text)
+    m_Current.Statut = cboStatut.Text: m_Current.CalculerAvancement
+    If Len(m_Current.Reference) = 0 Then m_Current.AssignReference()
+    If Not m_Current.Validate() Then ShowError "Validation", "Données invalides.": Exit Sub
+    g_CollMgr.Save m_Current, "apqp": g_CollMgr.InvalidateCache "apqp"
+    RefreshList: LoadForm
+    Exit Sub
+ErrHandler:
+    LogEx "FApqa", "cmdSave_Click", Err: ShowError "Sauvegarde", Err.Description
+End Sub
+
+Private Sub cmdDelete_Click()
+    If m_Current Is Nothing Then Exit Sub
+    If Not PromptYesNo("Suppression", T("msg.confirm_delete")) Then Exit Sub
+    g_CollMgr.DeleteById m_Current.Id, "apqp": g_CollMgr.InvalidateCache "apqp"
+    Set m_Current = Nothing: RefreshList
+End Sub
+
+Private Sub cmdClose_Click(): Unload Me: End Sub

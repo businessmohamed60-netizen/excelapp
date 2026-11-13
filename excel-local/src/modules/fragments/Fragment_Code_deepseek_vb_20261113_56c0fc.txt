@@ -1,0 +1,29 @@
+    ' Métrologie
+    Dim moyens As Object, msa As Object, capabs As Object, cartes As Object
+    Dim nbMoyensEnService As Long, nbEtalEchus As Long, nbMsaValides As Long
+    Dim nbCapabsValides As Long, nbCartesValidees As Long
+    Set moyens = g_CollMgr.LoadCollection("moyenmesure")
+    Set msa = g_CollMgr.LoadCollection("etudemsa")
+    Set capabs = g_CollMgr.LoadCollection("etudecapabilite")
+    Set cartes = g_CollMgr.LoadCollection("cartecontrole")
+    For Each k In moyens.Keys
+        If moyens(k).Statut = "En service" Then
+            nbMoyensEnService = nbMoyensEnService + 1
+            If moyens(k).EstEtalonnageEchu() Then nbEtalEchus = nbEtalEchus + 1
+        End If
+    Next k
+    For Each k In msa.Keys
+        If msa(k).Statut = "Validée" Then nbMsaValides = nbMsaValides + 1
+    Next k
+    For Each k In capabs.Keys
+        If capabs(k).Statut = "Validée" Then nbCapabsValides = nbCapabsValides + 1
+    Next k
+    For Each k In cartes.Keys
+        If cartes(k).Statut = "Validée" Then nbCartesValidees = nbCartesValidees + 1
+    Next k
+
+    result.Add EvaluerKpi("Moyens en service", nbMoyensEnService, 1, "Haut", "")
+    result.Add EvaluerKpi("Étalonnages échus", nbEtalEchus, 0, "Bas", "")
+    result.Add EvaluerKpi("Études MSA validées", nbMsaValides, 1, "Haut", "")
+    result.Add EvaluerKpi("Études capabilité validées", nbCapabsValides, 1, "Haut", "")
+    result.Add EvaluerKpi("Cartes de contrôle validées", nbCartesValidees, 1, "Haut", "")

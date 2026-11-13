@@ -1,0 +1,20 @@
+    Set rs = DbQuery("SELECT COUNT(*) AS n FROM fournisseur WHERE Critique=1 AND Statut='Actif'")
+    result.Add EvaluerKpi("Fournisseurs critiques", Nz(rs("n")), 0, "Bas", "")
+    rs.Close
+
+    Set rs = DbQuery("SELECT COUNT(*) AS n FROM fournisseur WHERE EstCertifie=1 AND DateExpirationCertification < ?", Array(Format$(Date, "yyyy-mm-dd")))
+    result.Add EvaluerKpi("Certifications fournisseurs échues", Nz(rs("n")), 0, "Bas", "")
+    rs.Close
+
+    Set rs = DbQuery("SELECT COUNT(*) AS n FROM equipement WHERE Statut='En panne'")
+    result.Add EvaluerKpi("Équipements en panne", Nz(rs("n")), 0, "Bas", "")
+    rs.Close
+
+    Set rs = DbQuery("SELECT COUNT(*) AS n FROM maintenancepreventive WHERE Statut='Actif' AND ProchaineDate < ?", Array(Format$(Date, "yyyy-mm-dd")))
+    result.Add EvaluerKpi("Maintenances en retard", Nz(rs("n")), 0, "Bas", "")
+    rs.Close
+
+    Set rs = DbQuery("SELECT SUM(QuantiteRejetee)*100.0/SUM(QuantiteTotale) AS taux FROM rejetinterne WHERE DateRejet >= ?", Array(Format$(DateSerial(Year(Date), 1, 1), "yyyy-mm-dd")))
+    Dim tauxRebut As Double: If Not rs.EOF Then If Not IsNull(rs("taux")) Then tauxRebut = CDbl(rs("taux"))
+    result.Add EvaluerKpi("Taux de rebut moyen", tauxRebut, 2, "Bas", "%")
+    rs.Close

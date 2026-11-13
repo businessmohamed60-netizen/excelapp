@@ -1,0 +1,29 @@
+Option Explicit
+' Contrôles : lblEtat, lblMachine, txtCle, cmdActiver, cmdFermer, lblMessage
+
+Private Sub UserForm_Initialize()
+    Caption = "Licence"
+    cmdActiver.Caption = "Activer": cmdFermer.Caption = T("btn.close")
+    RefreshEtat
+End Sub
+
+Private Sub RefreshEtat()
+    lblEtat.Caption = MessageEtatLicence()
+    lblMachine.Caption = "ID machine : " & Left$(MachineFingerprint(), 16) & "..."
+    If Len(g_Config.LicenseKey) > 0 Then txtCle.Text = g_Config.LicenseKey Else txtCle.Text = ""
+    lblMessage.Caption = ""
+End Sub
+
+Private Sub cmdActiver_Click()
+    If Len(Trim$(txtCle.Text)) = 0 Then lblMessage.Caption = "Saisissez une clé.": Exit Sub
+    If EnregistrerCleLicence(txtCle.Text) Then
+        lblMessage.Caption = "Licence activée."
+        lblMessage.ForeColor = RGB(0, 128, 0)
+        RefreshEtat
+    Else
+        lblMessage.Caption = "Clé invalide ou expirée."
+        lblMessage.ForeColor = RGB(192, 0, 0)
+    End If
+End Sub
+
+Private Sub cmdFermer_Click(): Unload Me: End Sub

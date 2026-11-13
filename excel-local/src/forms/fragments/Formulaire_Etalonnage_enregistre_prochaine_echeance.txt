@@ -1,0 +1,52 @@
+Private Sub cmdNewEtal_Click()
+    If m_CurrentMoyen Is Nothing Then Exit Sub
+    If Len(m_CurrentMoyen.Id) = 0 Then
+        ShowError "Étalonnage", "Enregistrez le moyen avant d'ajouter un étalonnage."
+        Exit Sub
+    End If
+    Set m_CurrentEtal = New CEtalonnage
+    m_CurrentEtal.InitNew
+    m_CurrentEtal.MoyenId = m_CurrentMoyen.Id
+    ClearEtalForm
+End Sub
+
+Private Sub cmdSaveEtal_Click()
+    On Error GoTo ErrHandler
+    If m_CurrentEtal Is Nothing Then Exit Sub
+    m_CurrentEtal.DateEtalonnage = ParseIsoDate(txtDateEtal.Text)
+    m_CurrentEtal.TypeOperation = cboTypeEtal.Text
+    m_CurrentEtal.Organisme = txtOrganisme.Text
+    m_CurrentEtal.CertificatNumero = txtCertificat.Text
+    m_CurrentEtal.Resultat = cboResultatEtal.Text
+    m_CurrentEtal.IncertitudeRelevee = txtIncertitudeEtal.Text
+    If Len(txtProchaineEtal.Text) > 0 Then
+        m_CurrentEtal.ProchaineEcheance = ParseIsoDate(txtProchaineEtal.Text)
+    End If
+    m_CurrentEtal.Cout = Val(txtCout.Text)
+    m_CurrentEtal.Commentaire = txtCommentaireEtal.Text
+
+    If Not m_CurrentEtal.Validate() Then
+        ShowError "Validation", "Date d'étalonnage requise."
+        Exit Sub
+    End If
+    g_CollMgr.Save m_CurrentEtal, "etalonnage"
+    g_CollMgr.InvalidateCache "etalonnage"
+
+    ' Mise à jour du moyen : dernier étalonnage + prochaine échéance
+    m_CurrentMoyen.DernierEtalonnage = m_CurrentEtal.DateEtalonnage
+    If IsDate(m_CurrentEtal.ProchaineEcheance) And m_CurrentEtal.ProchaineEcheance > 0 Then
+        m_CurrentMoyen.ProchainEtalonnage = m_CurrentEtal.ProchaineEcheance
+    Else
+        m_CurrentMoyen.RecalculerProchaineEcheance
+    End If
+    g_CollMgr.Save m_CurrentMoyen, "moyenmesure"
+    g_CollMgr.InvalidateCache "moyenmesure"
+    RefreshEtalonnages
+    LoadMoyenForm
+    lblStatus.Caption = "Étalonnage enregistré — prochaine échéance : " & _
+        FormatIsoDate(m_CurrentMoyen.ProchainEtalonnage)
+    Exit Sub
+ErrHandler:
+    LogEx "FMoyenMesure", "cmdSaveEtal_Click", Err
+    ShowError "Sauvegarde", Err.Description
+End Sub

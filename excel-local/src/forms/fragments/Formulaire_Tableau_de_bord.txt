@@ -1,0 +1,134 @@
+Option Explicit
+' Contrôles : lblTitre, lblKpi1..lblKpi8, lblKpi1Lbl..lblKpi8Lbl,
+'             lstActivites, lstAlertes, cmdNotifications, cmdRecherche,
+'             cmdClients, cmdAudits, cmdNc, cmdApqp, cmdAmdec, cmdSpc, cmdRefresh, cmdClose
+
+Private Sub UserForm_Initialize()
+    Caption = T("app.title")
+    lblTitre.Caption = "Tableau de bord — " & g_Config.Version
+    cmdClients.Caption = T("menu.clients"): cmdAudits.Caption = T("menu.audits")
+    cmdNc.Caption = "NC / CAPA": cmdApqp.Caption = T("menu.apqp")
+    cmdAmdec.Caption = T("menu.amdec"): cmdSpc.Caption = T("menu.spc")
+    cmdNotifications.Caption = "Notifications": cmdRecherche.Caption = "Recherche"
+    cmdRefresh.Caption = "Actualiser": cmdClose.Caption = T("btn.close")
+    RefreshAll
+End Sub
+
+Public Sub RefreshAll()
+    On Error GoTo ErrHandler
+    RefreshKpis: RefreshAlertes: RefreshActivites
+    Exit Sub
+ErrHandler:
+    LogEx "FMain", "RefreshAll", Err
+End Sub
+
+Private Sub RefreshKpis()
+    Dim clients As Object, audits As Object, ncs As Object
+    Dim capas As Object, apqps As Object, ppaps As Object, amdecs As Object
+    Set clients = g_CollMgr.LoadCollection("clients")
+    Set audits = g_CollMgr.LoadCollection("audits")
+    Set ncs = g_CollMgr.LoadCollection("nc")
+    Set capas = g_CollMgr.LoadCollection("capa")
+    Set apqps = g_CollMgr.LoadCollection("apqp")
+    Set ppaps = g_CollMgr.LoadCollection("ppap")
+    Set amdecs = g_CollMgr.LoadCollection("amdec")
+    Dim k As Variant, nAuditsEnCours As Long, nNcOuvertes As Long, nNcMajeures As Long
+    Dim nCapaRetard As Long, nApqpEnCours As Long, nPpapAttente As Long, nAmdecH As Long
+    For Each k In audits.Keys
+        If audits(k).Statut = "En cours" Then nAuditsEnCours = nAuditsEnCours + 1
+    Next k
+    For Each k In ncs.Keys
+        If ncs(k).Statut <> "Clôturée" Then
+            nNcOuvertes = nNcOuvertes + 1
+            If ncs(k).Classification = "Majeur" Or ncs(k).Classification = "Critique" Then nNcMajeures = nNcMajeures + 1
+        End If
+    Next k
+    For Each k In capas.Keys: If capas(k).EstEnRetard() Then nCapaRetard = nCapaRetard + 1: Next k
+    For Each k In apqps.Keys: If apqps(k).Statut = "En cours" Then nApqpEnCours = nApqpEnCours + 1: Next k
+    For Each k In ppaps.Keys: If ppaps(k).Statut = "En préparation" Then nPpapAttente = nPpapAttente + 1: Next k
+    For Each k In amdecs.Keys: nAmdecH = nAmdecH + amdecs(k).NbActionsH(): Next k
+    Dim nNotifsCrit As Long
+    Dim notifs As Collection: Set notifs = CollecterNotifications()
+    nNotifsCrit = CompterParSeverite(notifs, NotifCritique)
+    lblKpi1.Caption = CStr(clients.Count): lblKpi1Lbl.Caption = "Clients"
+    lblKpi2.Caption = CStr(nAuditsEnCours): lblKpi2Lbl.Caption = "Audits en cours"
+    lblKpi3.Caption = CStr(nNcOuvertes): lblKpi3Lbl.Caption = "NC ouvertes"
+    lblKpi4.Caption = CStr(nNcMajeures): lblKpi4Lbl.Caption = "dont majeures"
+    lblKpi5.Caption = CStr(nCapaRetard): lblKpi5Lbl.Caption = "CAPA en retard"
+    lblKpi6.Caption = CStr(nApqpEnCours): lblKpi6Lbl.Caption = "APQP en cours"
+    lblKpi7.Caption = CStr(nPpapAttente): lblKpi7Lbl.Caption = "PPAP à soumettre"
+    lblKpi8.Caption = CStr(nNotifsCrit): lblKpi8Lbl.Caption = "Alertes critiques"
+    If nNotifsCrit > 0 Then cmdNotifications.Caption = "!!! Notifications (" & nNotifsCrit & ")" Else cmdNotifications.Caption = "Notifications"
+End Sub
+
+Private Sub RefreshAlertes()
+    lstAlertes.Clear
+    With lstAlertes: .ColumnCount = 3: .ColumnWidths = "30;80;280": End With
+    Dim notifs As Collection, i As Long, n As Object, sevStr As String
+    Set notifs = CollecterNotifications()
+    Dim arr() As Object, j As Long
+    If notifs.Count > 0 Then
+        ReDim arr(0 To notifs.Count - 1)
+        For i = 1 To notifs.Count: Set arr(i - 1) = notifs(i): Next i
+        Dim tmp As Object
+        For i = 0 To UBound(arr) - 1
+            For j = i + 1 To UBound(arr)
+                If arr(j)("Severite") > arr(i)("Severite") Then Set tmp = arr(i): Set arr(i) = arr(j): Set arr(j) = tmp
+            Next j
+        Next i
+    End If
+    Dim limit As Long: limit = IIf(notifs.Count > 5, 5, notifs.Count)
+    For i = 0 To limit - 1
+        Set n = arr(i)
+        Select Case n("Severite")
+            Case NotifCritique: sevStr = "!!!"
+            Case NotifAvertissement: sevStr = "!!"
+            Case Else: sevStr = "i"
+        End Select
+        lstAlertes.AddItem sevStr
+        lstAlertes.List(lstAlertes.ListCount - 1, 1) = n("Categorie")
+        lstAlertes.List(lstAlertes.ListCount - 1, 2) = n("Titre")
+    Next i
+End Sub
+
+Private Sub RefreshActivites()
+    lstActivites.Clear
+    Dim audits As Object, ncs As Object
+    Set audits = g_CollMgr.LoadCollection("audits")
+    Set ncs = g_CollMgr.LoadCollection("nc")
+    Dim items As Object: Set items = CreateObject("Scripting.Dictionary")
+    Dim k As Variant, entry As String
+    For Each k In audits.Keys
+        entry = Format$(audits(k).DateCreation, "yyyy-mm-dd hh:nn") & "|Audit|" & audits(k).Processus & " (" & audits(k).Statut & ")"
+        items.Add "A" & k, entry
+    Next k
+    For Each k In ncs.Keys
+        entry = Format$(ncs(k).DateCreation, "yyyy-mm-dd hh:nn") & "|NC|" & ncs(k).Numero & " — " & Left$(ncs(k).Description, 50)
+        items.Add "N" & k, entry
+    Next k
+    Dim keys As Variant, i As Long, j As Long, tmp As String
+    keys = items.Keys
+    For i = LBound(keys) To UBound(keys) - 1
+        For j = i + 1 To UBound(keys)
+            If items(keys(j)) > items(keys(i)) Then tmp = keys(i): keys(i) = keys(j): keys(j) = tmp
+        Next j
+    Next i
+    Dim count As Long
+    For i = LBound(keys) To UBound(keys)
+        lstActivites.AddItem items(keys(i))
+        count = count + 1
+        If count >= 10 Then Exit For
+    Next i
+    If lstActivites.ListCount = 0 Then lstActivites.AddItem "(aucune activité)"
+End Sub
+
+Private Sub cmdNotifications_Click(): FNotifications.Show vbModeless: RefreshAll: End Sub
+Private Sub cmdRecherche_Click(): FRecherche.Show vbModeless: End Sub
+Private Sub cmdClients_Click(): FClient.Show vbModeless: RefreshAll: End Sub
+Private Sub cmdAudits_Click(): FAudit.Show vbModeless: RefreshAll: End Sub
+Private Sub cmdNc_Click(): FNonConformite.Show vbModeless: RefreshAll: End Sub
+Private Sub cmdApqp_Click(): FApqa.Show vbModeless: RefreshAll: End Sub
+Private Sub cmdAmdec_Click(): FAmdec.Show vbModeless: RefreshAll: End Sub
+Private Sub cmdSpc_Click(): FSpc.Show vbModeless: RefreshAll: End Sub
+Private Sub cmdRefresh_Click(): g_CollMgr.InvalidateAll: PrechargerCache: RefreshAll: End Sub
+Private Sub cmdClose_Click(): Unload Me: End Sub

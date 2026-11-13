@@ -1,0 +1,3 @@
+    ' XML escape — guillemets échappés correctement
+    AssertEquals "a&b<c>d""e'f", _
+        EscapeXml("a&b<c>d""e'f"), "échappement XML complet"

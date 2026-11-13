@@ -1,0 +1,88 @@
+Option Explicit
+' Contrôles : lstClients, txtCode, txtRaisonSociale, cboSecteur,
+'             txtContactNom, txtContactEmail, txtContactTel, txtAdresse,
+'             txtPays, cboNorme, chkActif, cmdNew, cmdSave, cmdDelete,
+'             cmdClose, lblStatus
+
+Private m_Clients As Object
+Private m_Current As CClient
+
+Private Sub UserForm_Initialize()
+    Caption = T("menu.clients")
+    cmdNew.Caption = T("btn.new"): cmdSave.Caption = T("btn.save")
+    cmdDelete.Caption = T("btn.delete"): cmdClose.Caption = T("btn.close")
+    InitCombos: RefreshList
+End Sub
+
+Private Sub InitCombos()
+    With cboSecteur
+        .Clear: .AddItem "Automobile": .AddItem "Aéronautique"
+        .AddItem "Médical": .AddItem "Électronique"
+        .AddItem "Mécanique": .AddItem "Autre"
+    End With
+    With cboNorme
+        .Clear: .AddItem "IATF 16949": .AddItem "ISO 9001": .AddItem "VDA 6.3"
+    End With
+End Sub
+
+Private Sub RefreshList()
+    Set m_Clients = g_CollMgr.LoadCollection("clients")
+    lstClients.Clear
+    Dim k As Variant
+    For Each k In m_Clients.Keys: lstClients.AddItem m_Clients(k).DisplayName: Next k
+    lblStatus.Caption = m_Clients.Count & " client(s)"
+End Sub
+
+Private Sub lstClients_Click()
+    Dim idx As Long: idx = lstClients.ListIndex
+    If idx < 0 Then Exit Sub
+    Dim k As Variant, i As Long
+    i = 0
+    For Each k In m_Clients.Keys
+        If i = idx Then Set m_Current = m_Clients(k): LoadForm: Exit Sub
+        i = i + 1
+    Next k
+End Sub
+
+Private Sub LoadForm()
+    If m_Current Is Nothing Then Exit Sub
+    txtCode.Text = m_Current.Code: txtRaisonSociale.Text = m_Current.RaisonSociale
+    cboSecteur.Text = m_Current.Secteur: txtContactNom.Text = m_Current.ContactNom
+    txtContactEmail.Text = m_Current.ContactEmail: txtContactTel.Text = m_Current.ContactTel
+    txtAdresse.Text = m_Current.Adresse: txtPays.Text = m_Current.Pays
+    cboNorme.Text = m_Current.Norme: chkActif.Value = m_Current.Actif
+End Sub
+
+Private Sub cmdNew_Click()
+    Set m_Current = New CClient: m_Current.InitNew
+    txtCode.Text = "": txtRaisonSociale.Text = "": cboSecteur.ListIndex = -1
+    txtContactNom.Text = "": txtContactEmail.Text = "": txtContactTel.Text = ""
+    txtAdresse.Text = "": txtPays.Text = "France": cboNorme.Text = "IATF 16949"
+    chkActif.Value = True: lblStatus.Caption = "Nouveau client"
+End Sub
+
+Private Sub cmdSave_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then ShowError "Sauvegarde", "Aucun client sélectionné.": Exit Sub
+    m_Current.Code = Trim$(txtCode.Text): m_Current.RaisonSociale = Trim$(txtRaisonSociale.Text)
+    m_Current.Secteur = cboSecteur.Text: m_Current.ContactNom = txtContactNom.Text
+    m_Current.ContactEmail = txtContactEmail.Text: m_Current.ContactTel = txtContactTel.Text
+    m_Current.Adresse = txtAdresse.Text: m_Current.Pays = txtPays.Text
+    m_Current.Norme = cboNorme.Text: m_Current.Actif = chkActif.Value
+    If Not m_Current.Validate() Then ShowError "Validation", "Code et Raison sociale obligatoires.": Exit Sub
+    g_CollMgr.Save m_Current, "clients": g_CollMgr.InvalidateCache "clients"
+    RefreshList: lblStatus.Caption = "Client enregistré."
+    Exit Sub
+ErrHandler:
+    LogEx "FClient", "cmdSave_Click", Err: ShowError "Sauvegarde", Err.Description
+End Sub
+
+Private Sub cmdDelete_Click()
+    If m_Current Is Nothing Then Exit Sub
+    If Not PromptYesNo("Suppression", T("msg.confirm_delete")) Then Exit Sub
+    g_CollMgr.DeleteById m_Current.Id, "clients"
+    g_CollMgr.InvalidateCache "clients"
+    Set m_Current = Nothing: RefreshList
+End Sub
+
+Private Sub cmdClose_Click(): Unload Me: End Sub

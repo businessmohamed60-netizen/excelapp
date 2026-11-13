@@ -1,0 +1,41 @@
+Option Explicit
+' Contrôles : txtRequete, cmdRechercher, lstResultats, cmdOuvrir, cmdFermer, lblCompteur
+
+Private m_Resultats As Collection
+
+Private Sub UserForm_Initialize()
+    Caption = "Recherche transversale"
+    cmdRechercher.Caption = "Rechercher": cmdOuvrir.Caption = "Ouvrir"
+    cmdFermer.Caption = T("btn.close")
+    With lstResultats: .ColumnCount = 4: .ColumnWidths = "70;180;250;40": End With
+End Sub
+
+Private Sub txtRequete_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+    If KeyCode = vbKeyReturn Then cmdRechercher_Click
+End Sub
+
+Private Sub cmdRechercher_Click()
+    If Len(Trim$(txtRequete.Text)) < 2 Then ShowInfo "Recherche", "Saisissez au moins 2 caractères.": Exit Sub
+    Set m_Resultats = RechercherGlobal(txtRequete.Text)
+    lstResultats.Clear
+    Dim i As Long, r As Object
+    For i = 1 To m_Resultats.Count
+        Set r = m_Resultats(i)
+        lstResultats.AddItem r("Type")
+        lstResultats.List(lstResultats.ListCount - 1, 1) = r("Titre")
+        lstResultats.List(lstResultats.ListCount - 1, 2) = r("Detail")
+        lstResultats.List(lstResultats.ListCount - 1, 3) = CStr(r("Score"))
+    Next i
+    lblCompteur.Caption = m_Resultats.Count & " résultat(s)"
+End Sub
+
+Private Sub lstResultats_DblClick(ByVal Cancel As MSForms.ReturnBoolean): cmdOuvrir_Click: End Sub
+
+Private Sub cmdOuvrir_Click()
+    Dim idx As Long: idx = lstResultats.ListIndex
+    If idx < 0 Then Exit Sub
+    Dim r As Object: Set r = m_Resultats(idx + 1)
+    OuvrirObjetDepuisNotif r("Action"), r("Id")
+End Sub
+
+Private Sub cmdFermer_Click(): Unload Me: End Sub

@@ -1,0 +1,41 @@
+Option Explicit
+' Contrôles : cboLangue, txtDataPath, txtLogPath, chkBackupAuto,
+'             cboFrequenceBackup, txtJoursRotation, lblEtatLicence,
+'             cmdLicence, cmdSigner, cmdVerifier, cmdSauvegarder, cmdFermer
+
+Private Sub UserForm_Initialize()
+    Caption = "Paramètres"
+    cmdLicence.Caption = "Gérer la licence...": cmdSigner.Caption = "Re-signer"
+    cmdVerifier.Caption = "Vérifier l'intégrité": cmdSauvegarder.Caption = "Sauvegarder"
+    cmdFermer.Caption = T("btn.close")
+    With cboLangue: .Clear: .AddItem "FR": .AddItem "EN": End With
+    cboLangue.Text = g_Config.Language
+    With cboFrequenceBackup: .Clear: .AddItem "Quotidienne": .AddItem "Hebdomadaire": .AddItem "Mensuelle": End With
+    txtDataPath.Text = DataPath(): txtLogPath.Text = LogPath()
+    lblEtatLicence.Caption = MessageEtatLicence()
+    chkBackupAuto.Value = True: cboFrequenceBackup.Text = "Quotidienne": txtJoursRotation.Text = "30"
+End Sub
+
+Private Sub cmdLicence_Click()
+    FLicence.Show vbModal
+    lblEtatLicence.Caption = MessageEtatLicence()
+End Sub
+
+Private Sub cmdSigner_Click()
+    If PromptYesNo("Signature", "Re-signer tous les fichiers ?") Then
+        SignerFichiersData: ShowInfo "Signature", "Manifeste mis à jour."
+    End If
+End Sub
+
+Private Sub cmdVerifier_Click()
+    If VerifierIntegrite() Then ShowInfo "Intégrité", "Données intègres." Else ShowError "Intégrité", "Anomalie détectée."
+End Sub
+
+Private Sub cmdSauvegarder_Click()
+    If SauvegarderMaintenant() Then ShowInfo "Sauvegarde", "Sauvegarde dans " & BackupPath() Else ShowError "Sauvegarde", "Échec."
+End Sub
+
+Private Sub cmdFermer_Click()
+    g_Config.Language = cboLangue.Text: g_Config.Save: SetLanguage g_Config.Language
+    Unload Me
+End Sub

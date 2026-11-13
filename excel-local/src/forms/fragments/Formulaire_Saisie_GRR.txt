@@ -1,0 +1,36 @@
+Option Explicit
+' Contrôles : lblPiece, txtOp1E1..txtOp3E3 (9 textbox), cmdOK, cmdCancel
+
+Private m_Piece As Long, m_Etude As CMsaEtude
+
+Public Property Let Piece(ByVal v As Long): m_Piece = v: End Property
+Public Property Let Etude(ByVal e As CMsaEtude): Set m_Etude = e: End Property
+
+Private Sub UserForm_Initialize()
+    Caption = "Saisie GRR"
+    lblPiece.Caption = "Pièce n° " & m_Piece
+    cmdOK.Caption = "OK": cmdCancel.Caption = "Annuler"
+    Dim op As Long, es As Long
+    For op = 1 To m_Etude.NbOperateurs
+        For es = 1 To m_Etude.NbEssais
+            Dim v As Double: v = m_Etude.GetMesure(op, m_Piece, es)
+            If v <> 0 Then Me.Controls("txtOp" & op & "E" & es).Text = CStr(v)
+        Next es
+    Next op
+End Sub
+
+Private Sub cmdOK_Click()
+    Dim op As Long, es As Long, v As Double
+    For op = 1 To m_Etude.NbOperateurs
+        For es = 1 To m_Etude.NbEssais
+            Dim s As String: s = Trim$(Me.Controls("txtOp" & op & "E" & es).Text)
+            If Len(s) > 0 Then
+                v = CDbl(Replace(s, ",", "."))
+                m_Etude.SetMesure op, m_Piece, es, v
+            End If
+        Next es
+    Next op
+    Unload Me
+End Sub
+
+Private Sub cmdCancel_Click(): Unload Me: End Sub

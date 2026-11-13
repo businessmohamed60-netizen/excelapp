@@ -1,0 +1,50 @@
+Private Sub cmdSave_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    SaveFromForm
+
+    If Len(m_Current.Numero) = 0 Then m_Current.AssignNumero()
+
+    If Not m_Current.Validate() Then
+        ShowError "Validation", "NC liée, description D2 et cause racine D4 sont obligatoires."
+        Exit Sub
+    End If
+    If Not m_Current.ValidateChronologie() Then
+        ShowError "Validation", "Les dates D2→D8 doivent être croissantes."
+        Exit Sub
+    End If
+
+    g_CollMgr.Save m_Current, "huitd"
+    g_CollMgr.InvalidateCache "huitd"
+    lblEtape.Caption = "8D enregistré — étape " & m_Current.EtapeCourante()
+    Exit Sub
+ErrHandler:
+    LogEx "F8D", "cmdSave_Click", Err
+    ShowError "Sauvegarde", Err.Description
+End Sub
+
+Private Sub cmdRapport_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    SaveFromForm
+    If Len(m_Current.Numero) = 0 Then m_Current.AssignNumero()
+
+    Dim nc As CNonConformite, client As CClient
+    Set nc = g_CollMgr.GetById(m_Current.NcId, "nc")
+    If nc Is Nothing Then
+        ShowError "Rapport", "NC liée introuvable."
+        Exit Sub
+    End If
+    If Len(nc.ClientId) > 0 Then Set client = g_CollMgr.GetById(nc.ClientId, "clients")
+
+    Dim path As String
+    path = GenererRapport8D(m_Current, nc, client)
+    If PromptYesNo("Rapport 8D", "Rapport créé :" & vbCrLf & path & _
+                   vbCrLf & vbCrLf & "Voulez-vous l'ouvrir ?") Then
+        Workbooks.Open path
+    End If
+    Exit Sub
+ErrHandler:
+    LogEx "F8D", "cmdRapport_Click", Err
+    ShowError "Rapport", Err.Description
+End Sub

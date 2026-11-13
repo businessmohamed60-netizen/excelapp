@@ -1,0 +1,6 @@
+        Case "moyenmesure":      Set CreateEmpty = New CMoyenMesure
+        Case "etalonnage":       Set CreateEmpty = New CEtalonnage
+        Case "etudemsa":         Set CreateEmpty = New CEtudeMsa
+        Case "lignemsa":         Set CreateEmpty = New CLigneMsa
+        Case "etudecapabilite":  Set CreateEmpty = New CEtudeCapabilite
+        Case "cartecontrole":    Set CreateEmpty = New CCarteControle

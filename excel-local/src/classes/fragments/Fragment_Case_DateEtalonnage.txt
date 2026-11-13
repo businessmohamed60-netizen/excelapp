@@ -1,0 +1,3 @@
+        Case "DateEtalonnage", "ProchaineEcheance", "ProchainEtalonnage", _
+             "DateMiseEnService", "DateEtude"
+            IsDateLike = True

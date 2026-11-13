@@ -1,0 +1,4 @@
+        Case "DatePrevue", "DateRealisee", "DateApprobation", _
+             "DateRevuePrevue", "DateRevueRealisee", "DateEvaluation", _
+             "DateRevue"
+            IsDateLike = True

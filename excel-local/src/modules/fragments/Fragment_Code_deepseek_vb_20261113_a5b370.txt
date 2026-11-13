@@ -1,0 +1,4 @@
+' Dans Journaliser :
+g_CollMgr.Save e, "audittrail"
+' Le champ s'appelle toujours Collection dans la classe CAuditTrail,
+' c'est la colonne SQL qui est renommée.

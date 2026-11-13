@@ -1,0 +1,7 @@
+    If g_Config.SignatureRequise Then
+        AjouterBlocSignature ws, 50, Environ$("USERNAME"), "Auteur"
+        wb.Save
+    End If
+    wb.Close SaveChanges:=False
+    ' Signature externe (.sig)
+    If g_Config.SignatureRequise Then SignerRapport outPath, "Auteur"

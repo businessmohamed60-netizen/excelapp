@@ -1,0 +1,192 @@
+Option Explicit
+' Contrôles : lstAmdec, cboClient, cboType, txtPiece, txtProcessus, txtEquipe,
+'             lstLignes, txtElement, txtFonction, txtModeDefaillance, txtEffets, txtCauses,
+'             txtControlesPrevention, txtControlesDetection, txtS, txtO, txtD,
+'             lblRPN, lblAP, txtActionsRecommandees, txtResponsable, txtDateEcheance,
+'             txtNouveauS, txtNouveauO, txtNouveauD,
+'             cmdNewAmdec, cmdSaveAmdec, cmdNewLigne, cmdSaveLigne, cmdDeleteLigne,
+'             cmdExport, cmdClose
+
+Private m_Amdecs As Object, m_Clients As Object, m_ClientIds As Object
+Private m_Current As CAmdec, m_Ligne As CLigneAmdec, m_LigneIndex As Long
+
+Private Sub UserForm_Initialize()
+    Caption = "AMDEC Produit / Processus"
+    cmdNewAmdec.Caption = "Nouvelle AMDEC": cmdSaveAmdec.Caption = "Enregistrer AMDEC"
+    cmdNewLigne.Caption = "Nouvelle ligne": cmdSaveLigne.Caption = "Enregistrer ligne"
+    cmdDeleteLigne.Caption = "Supprimer ligne": cmdExport.Caption = "Exporter AIAG"
+    cmdClose.Caption = T("btn.close")
+    With cboType: .Clear: .AddItem "Produit (DFMEA)": .AddItem "Processus (PFMEA)": End With
+    LoadClients: RefreshList
+End Sub
+
+Private Sub LoadClients()
+    Set m_Clients = g_CollMgr.LoadCollection("clients")
+    Set m_ClientIds = CreateObject("Scripting.Dictionary")
+    cboClient.Clear
+    Dim k As Variant
+    For Each k In m_Clients.Keys
+        cboClient.AddItem m_Clients(k).DisplayName
+        m_ClientIds.Add m_Clients(k).DisplayName, k
+    Next k
+End Sub
+
+Private Sub RefreshList()
+    Set m_Amdecs = g_CollMgr.LoadCollection("amdec")
+    lstAmdec.Clear
+    Dim k As Variant
+    For Each k In m_Amdecs.Keys
+        lstAmdec.AddItem m_Amdecs(k).Reference & " | " & m_Amdecs(k).Piece & " | RPN max " & m_Amdecs(k).RPNMax()
+    Next k
+End Sub
+
+Private Sub RefreshLignes()
+    lstLignes.Clear
+    With lstLignes: .ColumnCount = 7: .ColumnWidths = "100;140;30;30;30;40;40": End With
+    If m_Current Is Nothing Then Exit Sub
+    Dim l As CLigneAmdec
+    For Each l In m_Current.Lignes
+        lstLignes.AddItem l.Element
+        lstLignes.List(lstLignes.ListCount - 1, 1) = l.ModeDefaillance
+        lstLignes.List(lstLignes.ListCount - 1, 2) = CStr(l.S)
+        lstLignes.List(lstLignes.ListCount - 1, 3) = CStr(l.O)
+        lstLignes.List(lstLignes.ListCount - 1, 4) = CStr(l.D)
+        lstLignes.List(lstLignes.ListCount - 1, 5) = CStr(l.RPN())
+        lstLignes.List(lstLignes.ListCount - 1, 6) = l.ActionPriority()
+    Next l
+End Sub
+
+Private Sub lstAmdec_Click()
+    Dim idx As Long: idx = lstAmdec.ListIndex
+    If idx < 0 Then Exit Sub
+    Dim k As Variant, i As Long
+    i = 0
+    For Each k In m_Amdecs.Keys
+        If i = idx Then Set m_Current = m_Amdecs(k): LoadAmdecForm: RefreshLignes: Exit Sub
+        i = i + 1
+    Next k
+End Sub
+
+Private Sub LoadAmdecForm()
+    If m_Current Is Nothing Then Exit Sub
+    If m_Clients.Exists(m_Current.ClientId) Then cboClient.Text = m_Clients(m_Current.ClientId).DisplayName
+    cboType.Text = m_Current.TypeAmdec: txtPiece.Text = m_Current.Piece
+    txtProcessus.Text = m_Current.Processus: txtEquipe.Text = m_Current.Equipe
+End Sub
+
+Private Sub lstLignes_Click()
+    Dim idx As Long: idx = lstLignes.ListIndex
+    If idx < 0 Then Exit Sub
+    If m_Current Is Nothing Then Exit Sub
+    If idx + 1 > m_Current.Lignes.Count Then Exit Sub
+    Set m_Ligne = m_Current.Lignes(idx + 1)
+    m_LigneIndex = idx + 1: LoadLigneForm
+End Sub
+
+Private Sub LoadLigneForm()
+    If m_Ligne Is Nothing Then Exit Sub
+    txtElement.Text = m_Ligne.Element: txtFonction.Text = m_Ligne.Fonction
+    txtModeDefaillance.Text = m_Ligne.ModeDefaillance: txtEffets.Text = m_Ligne.Effets
+    txtCauses.Text = m_Ligne.Causes: txtControlesPrevention.Text = m_Ligne.ControlesPrevention
+    txtControlesDetection.Text = m_Ligne.ControlesDetection
+    txtS.Text = CStr(m_Ligne.S): txtO.Text = CStr(m_Ligne.O): txtD.Text = CStr(m_Ligne.D)
+    lblRPN.Caption = "RPN : " & m_Ligne.RPN(): lblAP.Caption = "AP : " & m_Ligne.ActionPriority()
+    txtActionsRecommandees.Text = m_Ligne.ActionsRecommandees: txtResponsable.Text = m_Ligne.Responsable
+    If m_Ligne.DateEcheance > 0 Then txtDateEcheance.Text = FormatIsoDate(m_Ligne.DateEcheance) Else txtDateEcheance.Text = ""
+    If m_Ligne.NouveauS > 0 Then
+        txtNouveauS.Text = CStr(m_Ligne.NouveauS)
+        txtNouveauO.Text = CStr(m_Ligne.NouveauO)
+        txtNouveauD.Text = CStr(m_Ligne.NouveauD)
+    Else
+        txtNouveauS.Text = "": txtNouveauO.Text = "": txtNouveauD.Text = ""
+    End If
+End Sub
+
+Private Sub cmdNewAmdec_Click()
+    Set m_Current = New CAmdec: m_Current.InitNew
+    cboClient.ListIndex = -1: cboType.Text = "Processus"
+    txtPiece.Text = "": txtProcessus.Text = "": txtEquipe.Text = ""
+    lstLignes.Clear
+End Sub
+
+Private Sub cmdSaveAmdec_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    If Not m_ClientIds.Exists(cboClient.Text) Then ShowError "Validation", "Client obligatoire.": Exit Sub
+    m_Current.ClientId = m_ClientIds(cboClient.Text): m_Current.TypeAmdec = cboType.Text
+    m_Current.Piece = txtPiece.Text: m_Current.Processus = txtProcessus.Text
+    m_Current.Equipe = txtEquipe.Text
+    If Len(m_Current.Reference) = 0 Then m_Current.AssignReference()
+    If Not m_Current.Validate() Then ShowError "Validation", "Client, pièce et 1 ligne requis.": Exit Sub
+    g_CollMgr.Save m_Current, "amdec": g_CollMgr.InvalidateCache "amdec"
+    RefreshList
+    Exit Sub
+ErrHandler:
+    LogEx "FAmdec", "cmdSaveAmdec_Click", Err: ShowError "Sauvegarde", Err.Description
+End Sub
+
+Private Sub cmdNewLigne_Click()
+    If m_Current Is Nothing Then ShowError "Ligne", "Créez une AMDEC d'abord.": Exit Sub
+    Set m_Ligne = New CLigneAmdec: m_Ligne.InitNew
+    txtElement.Text = "": txtFonction.Text = "": txtModeDefaillance.Text = ""
+    txtEffets.Text = "": txtCauses.Text = "": txtControlesPrevention.Text = ""
+    txtControlesDetection.Text = "": txtS.Text = "5": txtO.Text = "5": txtD.Text = "5"
+    lblRPN.Caption = "RPN : 125": lblAP.Caption = "AP : M"
+    txtActionsRecommandees.Text = "": txtResponsable.Text = ""
+    txtDateEcheance.Text = "": txtNouveauS.Text = "": txtNouveauO.Text = "": txtNouveauD.Text = ""
+    m_LigneIndex = 0
+End Sub
+
+Private Sub cmdSaveLigne_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Or m_Ligne Is Nothing Then Exit Sub
+    m_Ligne.Element = txtElement.Text: m_Ligne.Fonction = txtFonction.Text
+    m_Ligne.ModeDefaillance = txtModeDefaillance.Text: m_Ligne.Effets = txtEffets.Text
+    m_Ligne.Causes = txtCauses.Text: m_Ligne.ControlesPrevention = txtControlesPrevention.Text
+    m_Ligne.ControlesDetection = txtControlesDetection.Text
+    m_Ligne.S = CLng(Val(txtS.Text)): m_Ligne.O = CLng(Val(txtO.Text)): m_Ligne.D = CLng(Val(txtD.Text))
+    If m_Ligne.S < 1 Or m_Ligne.S > 10 Or m_Ligne.O < 1 Or m_Ligne.O > 10 Or m_Ligne.D < 1 Or m_Ligne.D > 10 Then
+        ShowError "Validation", "S, O et D entre 1 et 10.": Exit Sub
+    End If
+    m_Ligne.ActionsRecommandees = txtActionsRecommandees.Text: m_Ligne.Responsable = txtResponsable.Text
+    If Len(txtDateEcheance.Text) > 0 Then m_Ligne.DateEcheance = ParseIsoDate(txtDateEcheance.Text)
+    If Len(txtNouveauS.Text) > 0 Then
+        m_Ligne.NouveauS = CLng(Val(txtNouveauS.Text))
+        m_Ligne.NouveauO = CLng(Val(txtNouveauO.Text))
+        m_Ligne.NouveauD = CLng(Val(txtNouveauD.Text))
+    End If
+    lblRPN.Caption = "RPN : " & m_Ligne.RPN(): lblAP.Caption = "AP : " & m_Ligne.ActionPriority()
+    If m_LigneIndex > 0 And m_LigneIndex <= m_Current.Lignes.Count Then
+        m_Current.Lignes.Remove m_LigneIndex
+        If m_LigneIndex <= m_Current.Lignes.Count Then
+            m_Current.Lignes.Add m_Ligne, , m_LigneIndex
+        Else
+            m_Current.Lignes.Add m_Ligne
+        End If
+    Else
+        m_Current.Lignes.Add m_Ligne
+    End If
+    m_LigneIndex = 0: RefreshLignes
+    Exit Sub
+ErrHandler:
+    LogEx "FAmdec", "cmdSaveLigne_Click", Err: ShowError "Ligne", Err.Description
+End Sub
+
+Private Sub cmdDeleteLigne_Click()
+    If m_Current Is Nothing Or m_LigneIndex = 0 Then Exit Sub
+    If Not PromptYesNo("Suppression", "Supprimer cette ligne ?") Then Exit Sub
+    m_Current.Lignes.Remove m_LigneIndex
+    m_LigneIndex = 0: Set m_Ligne = Nothing: RefreshLignes
+End Sub
+
+Private Sub cmdExport_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    Dim path As String: path = ExporterAmdecAIAG(m_Current)
+    If PromptYesNo("Export AMDEC", "Fichier : " & path & vbCrLf & "L'ouvrir ?") Then Workbooks.Open path
+    Exit Sub
+ErrHandler:
+    LogEx "FAmdec", "cmdExport_Click", Err: ShowError "Export", Err.Description
+End Sub
+
+Private Sub cmdClose_Click(): Unload Me: End Sub

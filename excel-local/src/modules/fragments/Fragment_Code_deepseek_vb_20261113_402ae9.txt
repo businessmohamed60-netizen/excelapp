@@ -1,0 +1,8 @@
+    ' Fournisseurs
+    result.Add EvaluerKpi("Fournisseurs critiques", nbFournisseursCritiques, 0, "Bas", "")
+    result.Add EvaluerKpi("Certifications fournisseurs échues", nbCertifsEchues, 0, "Bas", "")
+    ' TPM
+    result.Add EvaluerKpi("Équipements en panne", nbEquipPanne, 0, "Bas", "")
+    result.Add EvaluerKpi("Maintenances en retard", nbMaintRetard, 0, "Bas", "")
+    ' Rejets
+    result.Add EvaluerKpi("Taux de rebut moyen", tauxRebutMoyen, 2, "Bas", "%")

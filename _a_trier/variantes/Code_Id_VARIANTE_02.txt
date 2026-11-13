@@ -1,0 +1,104 @@
+Option Explicit
+
+Private m_Id As String
+Private m_Numero As String
+Private m_ClientId As String
+Private m_AuditId As String
+Private m_ConstatId As String
+Private m_Source As String
+Private m_Processus As String
+Private m_Description As String
+Private m_Classification As String
+Private m_Gravite As Long
+Private m_DateDetection As Date
+Private m_DetectePar As String
+Private m_ContainmentImmediate As String
+Private m_Statut As String
+Private m_DateCloture As Date
+Private m_DateCreation As Date
+
+Public Property Get Id() As String: Id = m_Id: End Property
+Public Property Let Id(ByVal v As String): m_Id = v: End Property
+Public Property Get Numero() As String: Numero = m_Numero: End Property
+Public Property Let Numero(ByVal v As String): m_Numero = v: End Property
+Public Property Get ClientId() As String: ClientId = m_ClientId: End Property
+Public Property Let ClientId(ByVal v As String): m_ClientId = v: End Property
+Public Property Get AuditId() As String: AuditId = m_AuditId: End Property
+Public Property Let AuditId(ByVal v As String): m_AuditId = v: End Property
+Public Property Get ConstatId() As String: ConstatId = m_ConstatId: End Property
+Public Property Let ConstatId(ByVal v As String): m_ConstatId = v: End Property
+Public Property Get Source() As String: Source = m_Source: End Property
+Public Property Let Source(ByVal v As String): m_Source = v: End Property
+Public Property Get Processus() As String: Processus = m_Processus: End Property
+Public Property Let Processus(ByVal v As String): m_Processus = v: End Property
+Public Property Get Description() As String: Description = m_Description: End Property
+Public Property Let Description(ByVal v As String): m_Description = v: End Property
+Public Property Get Classification() As String: Classification = m_Classification: End Property
+Public Property Let Classification(ByVal v As String): m_Classification = v: End Property
+Public Property Get Gravite() As Long: Gravite = m_Gravite: End Property
+Public Property Let Gravite(ByVal v As Long): m_Gravite = v: End Property
+Public Property Get DateDetection() As Date: DateDetection = m_DateDetection: End Property
+Public Property Let DateDetection(ByVal v As Date): m_DateDetection = v: End Property
+Public Property Get DetectePar() As String: DetectePar = m_DetectePar: End Property
+Public Property Let DetectePar(ByVal v As String): m_DetectePar = v: End Property
+Public Property Get ContainmentImmediate() As String: ContainmentImmediate = m_ContainmentImmediate: End Property
+Public Property Let ContainmentImmediate(ByVal v As String): m_ContainmentImmediate = v: End Property
+Public Property Get Statut() As String: Statut = m_Statut: End Property
+Public Property Let Statut(ByVal v As String): m_Statut = v: End Property
+Public Property Get DateCloture() As Date: DateCloture = m_DateCloture: End Property
+Public Property Let DateCloture(ByVal v As Date): m_DateCloture = v: End Property
+Public Property Get DateCreation() As Date: DateCreation = m_DateCreation: End Property
+Public Property Let DateCreation(ByVal v As Date): m_DateCreation = v: End Property
+
+Public Sub InitNew()
+    m_Id = NewGuid()
+    m_DateCreation = Now
+    m_DateDetection = Date
+    m_Statut = "Ouverte"
+    m_Classification = "Mineur"
+    m_Gravite = 2
+    m_Source = "Interne"
+End Sub
+
+Public Sub AssignNumero()
+    Dim dom As Object, root As Object, yr As String
+    Dim fname As String, item As Object, itemYr As String, maxN As Long
+    fname = DataPath() & "nc.xml"
+    yr = Format$(Year(m_DateDetection), "0000")
+    If Dir(fname) <> "" Then
+        Set dom = CreateObject("MSXML2.DOMDocument.6.0")
+        dom.async = False
+        If dom.Load(fname) Then
+            Set root = dom.documentElement
+            For Each item In root.ChildNodes
+                Dim numeroNode As Object
+                Set numeroNode = item.selectSingleNode("Numero")
+                If Not numeroNode Is Nothing Then
+                    Dim parts() As String
+                    parts = Split(numeroNode.Text, "-")
+                    If UBound(parts) >= 2 Then
+                        itemYr = parts(1)
+                        If itemYr = yr Then
+                            Dim n As Long: n = CLng(Val(parts(2)))
+                            If n > maxN Then maxN = n
+                        End If
+                    End If
+                End If
+            Next item
+        End If
+    End If
+    m_Numero = "NC-" & yr & "-" & Format$(maxN + 1, "000")
+End Sub
+
+Public Function Validate() As Boolean
+    Dim errs As New Collection
+    If Len(Trim$(m_ClientId)) = 0 Then errs.Add "Client obligatoire"
+    If Len(Trim$(m_Description)) = 0 Then errs.Add "Description obligatoire"
+    If Not IsDate(m_DateDetection) Then errs.Add "Date de détection invalide"
+    If m_Statut = "Clôturée" And Not IsDate(m_DateCloture) Then errs.Add "Date de clôture requise"
+    Validate = (errs.Count = 0)
+End Function
+
+Public Function DisplayName() As String
+    DisplayName = m_Numero & " — " & m_Classification & " — " & Left$(m_Description, 50)
+End Function

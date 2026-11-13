@@ -1,0 +1,126 @@
+Option Explicit
+' Contrôles : lstEtudes, cboClient, txtCaracteristique, txtUnite, txtLSI, txtLSS,
+'             cboTaille, txtMesures, lblNbMesures, lblCp, lblCpk, lblPp, lblPpk,
+'             lblSigma, lblViolations, cmdNew, cmdSave, cmdCalculer, cmdExport, cmdClose
+
+Private m_Etudes As Object, m_Clients As Object, m_ClientIds As Object, m_Current As CSpcEtude
+
+Private Sub UserForm_Initialize()
+    Caption = "Étude SPC"
+    cmdNew.Caption = T("btn.new"): cmdSave.Caption = T("btn.save")
+    cmdCalculer.Caption = "Calculer": cmdExport.Caption = "Carte de contrôle"
+    cmdClose.Caption = T("btn.close")
+    Dim i As Long
+    For i = 2 To 10: cboTaille.AddItem CStr(i): Next i
+    LoadClients: RefreshList
+End Sub
+
+Private Sub LoadClients()
+    Set m_Clients = g_CollMgr.LoadCollection("clients")
+    Set m_ClientIds = CreateObject("Scripting.Dictionary")
+    cboClient.Clear
+    Dim k As Variant
+    For Each k In m_Clients.Keys
+        cboClient.AddItem m_Clients(k).DisplayName
+        m_ClientIds.Add m_Clients(k).DisplayName, k
+    Next k
+End Sub
+
+Private Sub RefreshList()
+    Set m_Etudes = g_CollMgr.LoadCollection("spc")
+    lstEtudes.Clear
+    Dim k As Variant
+    For Each k In m_Etudes.Keys
+        lstEtudes.AddItem m_Etudes(k).Reference & " | " & m_Etudes(k).Caracteristique
+    Next k
+End Sub
+
+Private Sub lstEtudes_Click()
+    Dim idx As Long: idx = lstEtudes.ListIndex
+    If idx < 0 Then Exit Sub
+    Dim k As Variant, i As Long
+    i = 0
+    For Each k In m_Etudes.Keys
+        If i = idx Then Set m_Current = m_Etudes(k): LoadForm: Exit Sub
+        i = i + 1
+    Next k
+End Sub
+
+Private Sub LoadForm()
+    If m_Current Is Nothing Then Exit Sub
+    If m_Clients.Exists(m_Current.ClientId) Then cboClient.Text = m_Clients(m_Current.ClientId).DisplayName
+    txtCaracteristique.Text = m_Current.Caracteristique: txtUnite.Text = m_Current.Unite
+    txtLSI.Text = CStr(m_Current.LimiteSpecInf): txtLSS.Text = CStr(m_Current.LimiteSpecSup)
+    cboTaille.Text = CStr(m_Current.TailleSousGroupe)
+    Dim s As String, i As Long
+    For i = 1 To m_Current.Mesures.Count: s = s & CStr(m_Current.Mesures(i)) & vbCrLf: Next i
+    txtMesures.Text = s: lblNbMesures.Caption = m_Current.Mesures.Count & " mesures"
+End Sub
+
+Private Sub cmdNew_Click()
+    Set m_Current = New CSpcEtude: m_Current.InitNew
+    cboClient.ListIndex = -1: txtCaracteristique.Text = "": txtUnite.Text = "mm"
+    txtLSI.Text = "": txtLSS.Text = "": cboTaille.Text = "5"
+    txtMesures.Text = "": lblNbMesures.Caption = "0 mesure"
+    lblCp.Caption = "": lblCpk.Caption = "": lblPp.Caption = "": lblPpk.Caption = ""
+    lblSigma.Caption = "": lblViolations.Caption = ""
+End Sub
+
+Private Sub cmdSave_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    If Not m_ClientIds.Exists(cboClient.Text) Then ShowError "Validation", "Client obligatoire.": Exit Sub
+    m_Current.ClientId = m_ClientIds(cboClient.Text)
+    m_Current.Caracteristique = txtCaracteristique.Text: m_Current.Unite = txtUnite.Text
+    m_Current.LimiteSpecInf = CDbl(Replace(txtLSI.Text, ",", "."))
+    m_Current.LimiteSpecSup = CDbl(Replace(txtLSS.Text, ",", "."))
+    m_Current.TailleSousGroupe = CLng(cboTaille.Text)
+    Set m_Current.Mesures = New Collection
+    Dim lines() As String, i As Long, v As String
+    lines = Split(txtMesures.Text, vbCrLf)
+    For i = LBound(lines) To UBound(lines)
+        v = Trim$(lines(i))
+        If Len(v) > 0 Then m_Current.Mesures.Add CDbl(Replace(v, ",", "."))
+    Next i
+    If Len(m_Current.Reference) = 0 Then m_Current.AssignReference()
+    If Not m_Current.Validate() Then ShowError "Validation", "Données insuffisantes.": Exit Sub
+    g_CollMgr.Save m_Current, "spc": g_CollMgr.InvalidateCache "spc"
+    RefreshList: LoadForm
+    Exit Sub
+ErrHandler:
+    LogEx "FSpc", "cmdSave_Click", Err: ShowError "Sauvegarde", Err.Description
+End Sub
+
+Private Sub cmdCalculer_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    If m_Current.Mesures.Count < m_Current.TailleSousGroupe * 2 Then
+        ShowError "Calcul", "Pas assez de mesures.": Exit Sub
+    End If
+    lblCp.Caption = "Cp  = " & Format$(m_Current.Cp(), "0.000")
+    lblCpk.Caption = "Cpk = " & Format$(m_Current.Cpk(), "0.000")
+    lblPp.Caption = "Pp  = " & Format$(m_Current.Pp(), "0.000")
+    lblPpk.Caption = "Ppk = " & Format$(m_Current.Ppk(), "0.000")
+    lblSigma.Caption = "Sigma estime = " & Format$(m_Current.SigmaEstime(), "0.0000")
+    Dim vio As Variant: vio = m_Current.ReglesNelson()
+    If UBound(vio) >= LBound(vio) Then
+        lblViolations.Caption = "Violations Nelson : " & Join(vio, ", ")
+    Else
+        lblViolations.Caption = "Violations Nelson : aucune"
+    End If
+    Exit Sub
+ErrHandler:
+    LogEx "FSpc", "cmdCalculer_Click", Err: ShowError "Calcul", Err.Description
+End Sub
+
+Private Sub cmdExport_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    Dim path As String: path = ExporterCarteControle(m_Current)
+    If PromptYesNo("Carte", "Fichier : " & path & vbCrLf & "L'ouvrir ?") Then Workbooks.Open path
+    Exit Sub
+ErrHandler:
+    LogEx "FSpc", "cmdExport_Click", Err: ShowError "Export", Err.Description
+End Sub
+
+Private Sub cmdClose_Click(): Unload Me: End Sub

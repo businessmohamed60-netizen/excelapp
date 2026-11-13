@@ -1,0 +1,1 @@
+    g_Config.DbPath = AppDataPath() & "data\test_iatf_" & Format$(Now, "hhnnss") & ".db"

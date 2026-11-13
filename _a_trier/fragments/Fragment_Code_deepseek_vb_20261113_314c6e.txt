@@ -1,0 +1,9 @@
+    ' Journal
+    Dim trail As Object, nbEntrees As Long, nbSignatures As Long
+    Set trail = g_CollMgr.LoadCollection("audittrail")
+    For Each k In trail.Keys
+        nbEntrees = nbEntrees + 1
+        If trail(k).Action = "Signature" Then nbSignatures = nbSignatures + 1
+    Next k
+    result.Add EvaluerKpi("Entrées journal d'audit", nbEntrees, 1, "Haut", "")
+    result.Add EvaluerKpi("Rapports signés", nbSignatures, 1, "Haut", "")

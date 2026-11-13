@@ -1,0 +1,13 @@
+Option Explicit
+' Contrôles : txtAide (MultiLine, Locked), cmdFermer
+
+Private m_Contenu As String
+Public Property Let Contenu(ByVal v As String): m_Contenu = v: End Property
+
+Private Sub UserForm_Initialize()
+    Caption = "Aide"
+    cmdFermer.Caption = T("btn.close")
+    txtAide.Text = m_Contenu
+End Sub
+
+Private Sub cmdFermer_Click(): Unload Me: End Sub

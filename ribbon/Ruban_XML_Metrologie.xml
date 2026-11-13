@@ -1,0 +1,11 @@
+<tab id="tabMetrologie" label="Métrologie">
+  <group id="grpMoyens" label="Moyens de mesure">
+    <button id="btnMoyens" label="Inventaire" size="large" onAction="Rb_Moyens"/>
+    <button id="btnEtalonnages" label="Étalonnages" size="large" onAction="Rb_Etalonnages"/>
+  </group>
+  <group id="grpEtudes" label="Études">
+    <button id="btnMsa" label="MSA / R&R" size="large" onAction="Rb_Msa"/>
+    <button id="btnCapabilite" label="Capabilité" size="large" onAction="Rb_Capabilite"/>
+    <button id="btnCarte" label="Carte de contrôle" size="large" onAction="Rb_Carte"/>
+  </group>
+</tab>

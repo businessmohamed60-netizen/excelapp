@@ -1,0 +1,105 @@
+Option Explicit
+
+Private m_Id As String
+Private m_Reference As String
+Private m_ClientId As String
+Private m_ApqpId As String
+Private m_Piece As String
+Private m_ReferencePiece As String
+Private m_NumeroSoumission As String
+Private m_NiveauPpap As Long
+Private m_Statut As String
+Private m_DateSoumission As Date
+Private m_DateAcceptation As Date
+Private m_DateCreation As Date
+Private m_El(1 To 18) As Boolean
+
+Public Property Get Id() As String: Id = m_Id: End Property
+Public Property Let Id(ByVal v As String): m_Id = v: End Property
+Public Property Get Reference() As String: Reference = m_Reference: End Property
+Public Property Let Reference(ByVal v As String): m_Reference = v: End Property
+Public Property Get ClientId() As String: ClientId = m_ClientId: End Property
+Public Property Let ClientId(ByVal v As String): m_ClientId = v: End Property
+Public Property Get ApqpId() As String: ApqpId = m_ApqpId: End Property
+Public Property Let ApqpId(ByVal v As String): m_ApqpId = v: End Property
+Public Property Get Piece() As String: Piece = m_Piece: End Property
+Public Property Let Piece(ByVal v As String): m_Piece = v: End Property
+Public Property Get ReferencePiece() As String: ReferencePiece = m_ReferencePiece: End Property
+Public Property Let ReferencePiece(ByVal v As String): m_ReferencePiece = v: End Property
+Public Property Get NumeroSoumission() As String: NumeroSoumission = m_NumeroSoumission: End Property
+Public Property Let NumeroSoumission(ByVal v As String): m_NumeroSoumission = v: End Property
+Public Property Get NiveauPpap() As Long: NiveauPpap = m_NiveauPpap: End Property
+Public Property Let NiveauPpap(ByVal v As Long): m_NiveauPpap = v: End Property
+Public Property Get Statut() As String: Statut = m_Statut: End Property
+Public Property Let Statut(ByVal v As String): m_Statut = v: End Property
+Public Property Get DateSoumission() As Date: DateSoumission = m_DateSoumission: End Property
+Public Property Let DateSoumission(ByVal v As Date): m_DateSoumission = v: End Property
+Public Property Get DateAcceptation() As Date: DateAcceptation = m_DateAcceptation: End Property
+Public Property Let DateAcceptation(ByVal v As Date): m_DateAcceptation = v: End Property
+Public Property Get DateCreation() As Date: DateCreation = m_DateCreation: End Property
+Public Property Let DateCreation(ByVal v As Date): m_DateCreation = v: End Property
+
+Public Property Get Element(ByVal idx As Long) As Boolean
+    If idx >= 1 And idx <= 18 Then Element = m_El(idx)
+End Property
+Public Property Let Element(ByVal idx As Long, ByVal v As Boolean)
+    If idx >= 1 And idx <= 18 Then m_El(idx) = v
+End Property
+
+Public Sub InitNew()
+    m_Id = NewGuid()
+    m_DateCreation = Now
+    m_NiveauPpap = 3
+    m_Statut = "En préparation"
+End Sub
+
+Public Sub AssignReference()
+    Dim dom As Object, root As Object, yr As String
+    Dim fname As String, item As Object, numeroNode As Object
+    Dim maxN As Long, parts() As String, n As Long
+    fname = DataPath() & "ppap.xml"
+    yr = Format$(Year(Date), "0000")
+    If Dir(fname) <> "" Then
+        Set dom = CreateObject("MSXML2.DOMDocument.6.0")
+        dom.async = False
+        If dom.Load(fname) Then
+            Set root = dom.documentElement
+            For Each item In root.ChildNodes
+                Set numeroNode = item.selectSingleNode("Reference")
+                If Not numeroNode Is Nothing Then
+                    parts = Split(numeroNode.Text, "-")
+                    If UBound(parts) >= 2 Then
+                        If parts(1) = yr Then
+                            n = CLng(Val(parts(2)))
+                            If n > maxN Then maxN = n
+                        End If
+                    End If
+                End If
+            Next item
+        End If
+    End If
+    m_Reference = "PPAP-" & yr & "-" & Format$(maxN + 1, "000")
+End Sub
+
+Public Function NbElementsFournis() As Long
+    Dim i As Long, n As Long
+    For i = 1 To 18: If m_El(i) Then n = n + 1: Next i
+    NbElementsFournis = n
+End Function
+
+Public Function TauxConformite() As Double
+    Dim requis As Long, i As Long
+    Select Case m_NiveauPpap
+        Case 1: requis = 1
+        Case 2: requis = 3
+        Case 3, 4, 5: requis = 18
+    End Select
+    If requis > 0 Then TauxConformite = NbElementsFournis() / requis
+End Function
+
+Public Function Validate() As Boolean
+    If Len(m_ClientId) = 0 Then Exit Function
+    If Len(Trim$(m_Piece)) = 0 Then Exit Function
+    If m_NiveauPpap < 1 Or m_NiveauPpap > 5 Then Exit Function
+    Validate = True
+End Function

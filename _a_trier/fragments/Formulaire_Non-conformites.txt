@@ -1,0 +1,141 @@
+Option Explicit
+' Contrôles : lstNc, cboClient, cboSource, cboProcessus, cboClassification,
+'             cboStatut, txtDescription, txtContainment, txtDetectePar,
+'             txtDateDetection, txtDateCloture, cmdNew, cmdSave, cmdDelete,
+'             cmdCapas, cmd8D, cmdCloturer, cmdClose, lblStatus
+
+Private m_Ncs As Object, m_Clients As Object, m_ClientIds As Object
+Private m_Current As CNonConformite
+
+Private Sub UserForm_Initialize()
+    Caption = "Non-conformités"
+    cmdNew.Caption = T("btn.new"): cmdSave.Caption = T("btn.save")
+    cmdDelete.Caption = T("btn.delete"): cmdClose.Caption = T("btn.close")
+    cmdCapas.Caption = "CAPA...": cmd8D.Caption = "8D...": cmdCloturer.Caption = "Clôturer NC"
+    InitCombos: LoadClients: RefreshList
+End Sub
+
+Private Sub InitCombos()
+    With cboSource: .Clear: .AddItem "Interne": .AddItem "Audit": .AddItem "Réclamation client": .AddItem "Fournisseur": End With
+    With cboProcessus
+        .Clear: .AddItem "Production": .AddItem "Qualité": .AddItem "Logistique"
+        .AddItem "Achats": .AddItem "Maintenance": .AddItem "RH": .AddItem "Direction"
+        .AddItem "Commercial": .AddItem "Autre"
+    End With
+    With cboClassification: .Clear: .AddItem "Critique": .AddItem "Majeur": .AddItem "Mineur": .AddItem "Observation": End With
+    With cboStatut: .Clear: .AddItem "Ouverte": .AddItem "En cours": .AddItem "En attente": .AddItem "Clôturée": End With
+End Sub
+
+Private Sub LoadClients()
+    Set m_Clients = g_CollMgr.LoadCollection("clients")
+    Set m_ClientIds = CreateObject("Scripting.Dictionary")
+    cboClient.Clear
+    Dim k As Variant
+    For Each k In m_Clients.Keys
+        cboClient.AddItem m_Clients(k).DisplayName
+        m_ClientIds.Add m_Clients(k).DisplayName, k
+    Next k
+End Sub
+
+Private Sub RefreshList()
+    Set m_Ncs = g_CollMgr.LoadCollection("nc")
+    lstNc.Clear
+    With lstNc: .ColumnCount = 4: .ColumnWidths = "25;80;70;120": End With
+    Dim k As Variant
+    For Each k In m_Ncs.Keys
+        lstNc.AddItem IndicateurStatut(m_Ncs(k).Statut)
+        lstNc.List(lstNc.ListCount - 1, 1) = m_Ncs(k).Numero
+        lstNc.List(lstNc.ListCount - 1, 2) = m_Ncs(k).Classification
+        lstNc.List(lstNc.ListCount - 1, 3) = m_Ncs(k).Statut
+    Next k
+    lblStatus.Caption = m_Ncs.Count & " NC"
+End Sub
+
+Private Sub lstNc_Click()
+    Dim idx As Long: idx = lstNc.ListIndex
+    If idx < 0 Then Exit Sub
+    Dim k As Variant, i As Long
+    i = 0
+    For Each k In m_Ncs.Keys
+        If i = idx Then Set m_Current = m_Ncs(k): LoadForm: Exit Sub
+        i = i + 1
+    Next k
+End Sub
+
+Private Sub LoadForm()
+    If m_Current Is Nothing Then Exit Sub
+    If m_Clients.Exists(m_Current.ClientId) Then cboClient.Text = m_Clients(m_Current.ClientId).DisplayName
+    cboSource.Text = m_Current.Source: cboProcessus.Text = m_Current.Processus
+    cboClassification.Text = m_Current.Classification: cboStatut.Text = m_Current.Statut
+    txtDescription.Text = m_Current.Description: txtContainment.Text = m_Current.ContainmentImmediate
+    txtDetectePar.Text = m_Current.DetectePar: txtDateDetection.Text = FormatIsoDate(m_Current.DateDetection)
+    If m_Current.DateCloture > 0 Then txtDateCloture.Text = FormatIsoDate(m_Current.DateCloture) Else txtDateCloture.Text = ""
+End Sub
+
+Private Sub cmdNew_Click()
+    Set m_Current = New CNonConformite: m_Current.InitNew
+    cboClient.ListIndex = -1: cboSource.Text = "Interne": cboProcessus.ListIndex = -1
+    cboClassification.Text = "Mineur": cboStatut.Text = "Ouverte"
+    txtDescription.Text = "": txtContainment.Text = ""
+    txtDetectePar.Text = Environ$("USERNAME"): txtDateDetection.Text = FormatIsoDate(Date)
+    txtDateCloture.Text = ""
+End Sub
+
+Private Sub cmdSave_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    If Not m_ClientIds.Exists(cboClient.Text) Then ShowError "Validation", "Client obligatoire.": Exit Sub
+    m_Current.ClientId = m_ClientIds(cboClient.Text): m_Current.Source = cboSource.Text
+    m_Current.Processus = cboProcessus.Text: m_Current.Classification = cboClassification.Text
+    m_Current.Statut = cboStatut.Text: m_Current.Description = txtDescription.Text
+    m_Current.ContainmentImmediate = txtContainment.Text: m_Current.DetectePar = txtDetectePar.Text
+    m_Current.DateDetection = ParseIsoDate(txtDateDetection.Text)
+    If Len(txtDateCloture.Text) > 0 Then m_Current.DateCloture = ParseIsoDate(txtDateCloture.Text)
+    If Len(m_Current.Numero) = 0 Then m_Current.AssignNumero()
+    If Not m_Current.Validate() Then ShowError "Validation", "Données invalides.": Exit Sub
+    g_CollMgr.Save m_Current, "nc": g_CollMgr.InvalidateCache "nc"
+    RefreshList: lblStatus.Caption = "NC " & m_Current.Numero & " enregistrée."
+    Exit Sub
+ErrHandler:
+    LogEx "FNonConformite", "cmdSave_Click", Err: ShowError "Sauvegarde", Err.Description
+End Sub
+
+Private Sub cmdDelete_Click()
+    If m_Current Is Nothing Then Exit Sub
+    If Not PromptYesNo("Suppression", T("msg.confirm_delete")) Then Exit Sub
+    g_CollMgr.DeleteById m_Current.Id, "nc": g_CollMgr.InvalidateCache "nc"
+    Set m_Current = Nothing: RefreshList
+End Sub
+
+Private Sub cmdCapas_Click()
+    If m_Current Is Nothing Then Exit Sub
+    If Len(m_Current.Numero) = 0 Then ShowError "CAPA", "Enregistrez la NC d'abord.": Exit Sub
+    Dim f As FCapa: Set f = New FCapa
+    f.NcCourante = m_Current.Id: f.Show vbModal
+End Sub
+
+Private Sub cmd8D_Click()
+    If m_Current Is Nothing Then Exit Sub
+    If m_Current.Classification <> "Critique" And m_Current.Classification <> "Majeur" Then
+        ShowError "8D", "8D réservé aux NC Critique/Majeur.": Exit Sub
+    End If
+    If Len(m_Current.Numero) = 0 Then ShowError "8D", "Enregistrez la NC d'abord.": Exit Sub
+    Dim f As F8D: Set f = New F8D
+    f.NcCourante = m_Current.Id: f.Show vbModal
+End Sub
+
+Private Sub cmdCloturer_Click()
+    If m_Current Is Nothing Then Exit Sub
+    Dim capas As Object, k As Variant, enCours As Long
+    Set capas = g_CollMgr.LoadCollection("capa")
+    For Each k In capas.Keys
+        If capas(k).NcId = m_Current.Id And capas(k).Statut <> "Clôturée" Then enCours = enCours + 1
+    Next k
+    If enCours > 0 Then ShowError "Clôture", enCours & " CAPA non clôturée(s).": Exit Sub
+    If Not PromptYesNo("Clôture", "Confirmer la clôture ?") Then Exit Sub
+    m_Current.Statut = "Clôturée": m_Current.DateCloture = Date
+    g_CollMgr.Save m_Current, "nc": g_CollMgr.InvalidateCache "nc"
+    RefreshList: LoadForm
+End Sub
+
+Private Sub cmdClose_Click(): Unload Me: End Sub

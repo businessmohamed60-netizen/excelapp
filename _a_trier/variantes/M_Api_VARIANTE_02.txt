@@ -1,0 +1,98 @@
+Attribute VB_Name = "M_Api"
+Option Explicit
+
+' ============================================================
+' M_Api — Export JSON statique pour intégration REST
+' ============================================================
+
+Public Sub ExporterApiJson()
+    On Error GoTo ErrHandler
+    Dim apiDir As String
+    apiDir = DataPath() & "api\"
+    If Dir(apiDir, vbDirectory) = "" Then MkDir apiDir
+
+    ExporterCollectionJson "clients", apiDir
+    ExporterCollectionJson "audits", apiDir
+    ExporterCollectionJson "nc", apiDir
+    ExporterCollectionJson "capa", apiDir
+    ExporterCollectionJson "huitd", apiDir
+    ExporterCollectionJson "amdec", apiDir
+    ExporterCollectionJson "ligneamdec", apiDir
+    ExporterCollectionJson "moyenmesure", apiDir
+    ExporterCollectionJson "etudemsa", apiDir
+
+    ' Fichier d'index
+    Dim f As Integer: f = FreeFile
+    Open apiDir & "index.json" For Output As #f
+    Print #f, "{""generatedAt"": """ & Format$(Now, "yyyy-mm-dd hh:nn:ss") & ""","
+    Print #f, " ""endpoints"": ["
+    Print #f, "  {""path"": ""/clients"", ""file"": ""clients.json""},"
+    Print #f, "  {""path"": ""/audits"", ""file"": ""audits.json""},"
+    Print #f, "  {""path"": ""/nc"", ""file"": ""nc.json""},"
+    Print #f, "  {""path"": ""/capa"", ""file"": ""capa.json""},"
+    Print #f, "  {""path"": ""/8d"", ""file"": ""huitd.json""},"
+    Print #f, "  {""path"": ""/amdec"", ""file"": ""amdec.json""},"
+    Print #f, "  {""path"": ""/moyens"", ""file"": ""moyenmesure.json""},"
+    Print #f, "  {""path"": ""/msa"", ""file"": ""etudemsa.json""}"
+    Print #f, " ]}"
+    Close #f
+
+    Log LogInfo, "M_Api", "Export JSON terminé dans " & apiDir
+    Exit Sub
+ErrHandler:
+    LogEx "M_Api", "ExporterApiJson", Err
+End Sub
+
+Private Sub ExporterCollectionJson(ByVal collection As String, ByVal apiDir As String)
+    On Error Resume Next
+    Dim coll As Object, k As Variant, f As Integer, first As Boolean
+    Set coll = g_CollMgr.LoadCollection(collection)
+    If coll Is Nothing Then Exit Sub
+    f = FreeFile
+    Open apiDir & collection & ".json" For Output As #f
+    Print #f, "["
+    first = True
+    For Each k In coll.Keys
+        If Not first Then Print #f, ","
+        Print #f, ObjetVersJson(coll(k), collection);
+        first = False
+    Next k
+    Print #f, vbCrLf & "]"
+    Close #f
+End Sub
+
+Private Function ObjetVersJson(ByVal obj As Object, ByVal collection As String) As String
+    Dim props As Variant, i As Long, s As String
+    props = GetDomainProperties(collection)
+    If IsEmpty(props) Then ObjetVersJson = "{}": Exit Function
+    s = "{"
+    For i = LBound(props) To UBound(props)
+        Dim v As Variant
+        v = GetPropertyValue(obj, CStr(props(i)))
+        If i > LBound(props) Then s = s & ", "
+        s = s & """" & props(i) & """: " & ValeurVersJson(v)
+    Next i
+    s = s & "}"
+    ObjetVersJson = s
+End Function
+
+Private Function ValeurVersJson(ByVal v As Variant) As String
+    If IsNull(v) Or IsEmpty(v) Then
+        ValeurVersJson = "null"
+    ElseIf IsDate(v) Then
+        ValeurVersJson = """" & Format$(v, "yyyy-mm-dd hh:nn:ss") & """"
+    ElseIf IsNumeric(v) Then
+        ValeurVersJson = CStr(v)
+    ElseIf VarType(v) = vbBoolean Then
+        ValeurVersJson = IIf(v, "true", "false")
+    Else
+        Dim s As String: s = CStr(v)
+        s = Replace(s, "\", "\\")
+        s = Replace(s, """", "\""")
+        s = Replace(s, vbCrLf, "\n")
+        s = Replace(s, vbCr, "\n")
+        s = Replace(s, vbLf, "\n")
+        s = Replace(s, vbTab, "\t")
+        ValeurVersJson = """" & s & """"
+    End If
+End Function

@@ -1,0 +1,70 @@
+Private Sub cmdAddSousGroupe_Click()
+    Dim s As String, parts() As String, i As Long, n As Long
+    s = Replace(txtSousGroupe.Text, ".", ",")
+    parts = Split(s, ";")
+    n = UBound(parts) - LBound(parts) + 1
+    If n < 2 Then
+        ShowError "Sous-groupe", "Saisir au moins 2 valeurs séparées par ';'."
+        Exit Sub
+    End If
+    Dim ligne As New CLigneCarte
+    ' (CLigneCarte : Id, CarteId, Numero, Valeurs (chaîne), DateCreation — non détaillée ici)
+    ligne.InitNew
+    ligne.CarteId = m_Current.Id
+    ligne.Numero = lstSousGroupes.ListCount + 1
+    ligne.Valeurs = txtSousGroupe.Text
+    g_CollMgr.Save ligne, "lignecarte"
+    g_CollMgr.InvalidateCache "lignecarte"
+    RefreshSousGroupes
+End Sub
+
+Private Sub cmdCalculer_Click()
+    ' Construire le tableau 2D des sous-groupes
+    Dim lignes As Object, k As Variant, arr() As Variant, i As Long, j As Long
+    Dim nSousGroupes As Long, nTaille As Long
+    Set lignes = g_CollMgr.LoadCollection("lignecarte")
+    nSousGroupes = 0: nTaille = m_Current.SousGroupeTaille
+    For Each k In lignes.Keys
+        If lignes(k).CarteId = m_Current.Id Then nSousGroupes = nSousGroupes + 1
+    Next k
+    If nSousGroupes < 2 Then
+        ShowError "Carte", "Au moins 2 sous-groupes requis."
+        Exit Sub
+    End If
+    ReDim arr(1 To nSousGroupes, 1 To nTaille)
+    i = 0
+    For Each k In lignes.Keys
+        If lignes(k).CarteId = m_Current.Id Then
+            i = i + 1
+            Dim parts() As String
+            parts = Split(Replace(lignes(k).Valeurs, ".", ","), ";")
+            For j = 1 To nTaille
+                If j - 1 <= UBound(parts) Then arr(i, j) = Val(Replace(parts(j - 1), ",", "."))
+            Next j
+        End If
+    Next k
+    CalculerCarteXbarR m_Current, arr
+    lblLigneCentre.Caption = "X̄̄ = " & Format$(m_Current.LigneCentre, "0.000")
+    lblUCL.Caption = "UCL = " & Format$(m_Current.LimiteSup, "0.000")
+    lblLCL.Caption = "LCL = " & Format$(m_Current.LimiteInf, "0.000")
+    lblRBar.Caption = "R̄ = " & Format$(m_Current.LigneCentreR, "0.000")
+    lblUCLR.Caption = "UCLR = " & Format$(m_Current.LimiteSupR, "0.000")
+    lblLCLR.Caption = "LCLR = " & Format$(m_Current.LimiteInfR, "0.000")
+
+    ' Règles de Nelson sur les moyennes
+    Dim moyennes() As Double, m As Long
+    ReDim moyennes(1 To nSousGroupes)
+    For i = 1 To nSousGroupes
+        Dim s As Double
+        For j = 1 To nTaille: s = s + arr(i, j): Next j
+        moyennes(i) = s / nTaille
+    Next i
+    Dim alertes As Collection, a As Variant
+    Set alertes = AppliquerReglesNelson(moyennes, m_Current.LigneCentre, m_Current.LimiteSup, m_Current.LimiteInf)
+    lstAlertes.Clear
+    If alertes.Count = 0 Then
+        lstAlertes.AddItem "Aucune alerte — processus sous contrôle."
+    Else
+        For Each a In alertes: lstAlertes.AddItem a: Next a
+    End If
+End Sub

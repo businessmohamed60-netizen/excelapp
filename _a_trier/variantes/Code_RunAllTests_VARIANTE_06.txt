@@ -1,0 +1,8 @@
+Public Sub RunAllTests()
+    ' ... 29 suites Phases 2-8 ...
+    T_Fournisseur
+    T_Equipement
+    T_Rejet
+    T_Surveillance
+    MsgBox "Tests terminés — 33 suites.", vbInformation
+End Sub

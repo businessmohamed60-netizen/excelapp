@@ -1,0 +1,10 @@
+        Case "fournisseur":              Set CreateEmpty = New CFournisseur
+        Case "evaluationfournisseur":    Set CreateEmpty = New CEvaluationFournisseur
+        Case "auditfournisseur":         Set CreateEmpty = New CAuditFournisseur
+        Case "equipement":               Set CreateEmpty = New CEquipement
+        Case "maintenancepreventive":    Set CreateEmpty = New CMaintenancePreventive
+        Case "interventionmaintenance":  Set CreateEmpty = New CInterventionMaintenance
+        Case "rejetinterne":             Set CreateEmpty = New CRejetInterne
+        Case "analyserejet":             Set CreateEmpty = New CAnalyseRejet
+        Case "plansurveillance":         Set CreateEmpty = New CPlanSurveillance
+        Case "lignesurveillance":        Set CreateEmpty = New CLigneSurveillance

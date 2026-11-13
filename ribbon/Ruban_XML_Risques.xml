@@ -1,0 +1,9 @@
+<tab id="tabRisques" label="Risques">
+  <group id="grpAmdec" label="AMDEC">
+    <button id="btnAmdec" label="AMDEC" size="large" onAction="Rb_Amdec"/>
+  </group>
+  <group id="grpPlan" label="Maîtrise">
+    <button id="btnPlan" label="Plans de contrôle" size="large" onAction="Rb_PlanControle"/>
+    <button id="btnCarac" label="Caractéristiques CC/SC" size="large" onAction="Rb_Caracteristiques"/>
+  </group>
+</tab>

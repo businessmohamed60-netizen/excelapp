@@ -1,0 +1,30 @@
+Option Explicit
+
+Private m_Id As String
+Private m_AuditId As String
+Private m_Chapitre As String
+Private m_Description As String
+Private m_Classification As String
+Private m_Preuve As String
+Private m_DateCreation As Date
+
+Public Property Get Id() As String: Id = m_Id: End Property
+Public Property Let Id(ByVal v As String): m_Id = v: End Property
+Public Property Get AuditId() As String: AuditId = m_AuditId: End Property
+Public Property Let AuditId(ByVal v As String): m_AuditId = v: End Property
+Public Property Get Chapitre() As String: Chapitre = m_Chapitre: End Property
+Public Property Let Chapitre(ByVal v As String): m_Chapitre = v: End Property
+Public Property Get Description() As String: Description = m_Description: End Property
+Public Property Let Description(ByVal v As String): m_Description = v: End Property
+Public Property Get Classification() As String: Classification = m_Classification: End Property
+Public Property Let Classification(ByVal v As String): m_Classification = v: End Property
+Public Property Get Preuve() As String: Preuve = m_Preuve: End Property
+Public Property Let Preuve(ByVal v As String): m_Preuve = v: End Property
+Public Property Get DateCreation() As Date: DateCreation = m_DateCreation: End Property
+Public Property Let DateCreation(ByVal v As Date): m_DateCreation = v: End Property
+
+Public Sub InitNew()
+    m_Id = NewGuid()
+    m_DateCreation = Now
+    m_Classification = "Observation"
+End Sub

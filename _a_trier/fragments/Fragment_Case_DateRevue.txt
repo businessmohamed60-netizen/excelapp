@@ -1,0 +1,2 @@
+        Case "DateRevue", "DateEcheanceAction", "DateRealisationAction"
+            IsDateLike = True

@@ -1,0 +1,142 @@
+Option Explicit
+
+Private m_Id As String
+Private m_Numero As String
+Private m_NcId As String
+Private m_Statut As String
+Private m_D1_Champion As String
+Private m_D1_Leader As String
+Private m_D1_Membres As String
+Private m_D2_Description As String
+Private m_D2_Date As Date
+Private m_D2_5W2H As String
+Private m_D3_Actions As String
+Private m_D3_Date As Date
+Private m_D3_Verification As String
+Private m_D4_Ishikawa As String
+Private m_D4_5Pourquoi As String
+Private m_D4_CauseRacine As String
+Private m_D4_CauseEchappee As String
+Private m_D4_Date As Date
+Private m_D5_Actions As String
+Private m_D5_Responsable As String
+Private m_D5_Date As Date
+Private m_D6_Actions As String
+Private m_D6_Date As Date
+Private m_D6_Validation As String
+Private m_D7_Actions As String
+Private m_D7_Date As Date
+Private m_D8_Date As Date
+Private m_D8_Bilan As String
+Private m_DateCreation As Date
+
+Public Property Get Id() As String: Id = m_Id: End Property
+Public Property Let Id(ByVal v As String): m_Id = v: End Property
+Public Property Get Numero() As String: Numero = m_Numero: End Property
+Public Property Let Numero(ByVal v As String): m_Numero = v: End Property
+Public Property Get NcId() As String: NcId = m_NcId: End Property
+Public Property Let NcId(ByVal v As String): m_NcId = v: End Property
+Public Property Get Statut() As String: Statut = m_Statut: End Property
+Public Property Let Statut(ByVal v As String): m_Statut = v: End Property
+Public Property Get D1_Champion() As String: D1_Champion = m_D1_Champion: End Property
+Public Property Let D1_Champion(ByVal v As String): m_D1_Champion = v: End Property
+Public Property Get D1_Leader() As String: D1_Leader = m_D1_Leader: End Property
+Public Property Let D1_Leader(ByVal v As String): m_D1_Leader = v: End Property
+Public Property Get D1_Membres() As String: D1_Membres = m_D1_Membres: End Property
+Public Property Let D1_Membres(ByVal v As String): m_D1_Membres = v: End Property
+Public Property Get D2_Description() As String: D2_Description = m_D2_Description: End Property
+Public Property Let D2_Description(ByVal v As String): m_D2_Description = v: End Property
+Public Property Get D2_Date() As Date: D2_Date = m_D2_Date: End Property
+Public Property Let D2_Date(ByVal v As Date): m_D2_Date = v: End Property
+Public Property Get D2_5W2H() As String: D2_5W2H = m_D2_5W2H: End Property
+Public Property Let D2_5W2H(ByVal v As String): m_D2_5W2H = v: End Property
+Public Property Get D3_Actions() As String: D3_Actions = m_D3_Actions: End Property
+Public Property Let D3_Actions(ByVal v As String): m_D3_Actions = v: End Property
+Public Property Get D3_Date() As Date: D3_Date = m_D3_Date: End Property
+Public Property Let D3_Date(ByVal v As Date): m_D3_Date = v: End Property
+Public Property Get D3_Verification() As String: D3_Verification = m_D3_Verification: End Property
+Public Property Let D3_Verification(ByVal v As String): m_D3_Verification = v: End Property
+Public Property Get D4_Ishikawa() As String: D4_Ishikawa = m_D4_Ishikawa: End Property
+Public Property Let D4_Ishikawa(ByVal v As String): m_D4_Ishikawa = v: End Property
+Public Property Get D4_5Pourquoi() As String: D4_5Pourquoi = m_D4_5Pourquoi: End Property
+Public Property Let D4_5Pourquoi(ByVal v As String): m_D4_5Pourquoi = v: End Property
+Public Property Get D4_CauseRacine() As String: D4_CauseRacine = m_D4_CauseRacine: End Property
+Public Property Let D4_CauseRacine(ByVal v As String): m_D4_CauseRacine = v: End Property
+Public Property Get D4_CauseEchappee() As String: D4_CauseEchappee = m_D4_CauseEchappee: End Property
+Public Property Let D4_CauseEchappee(ByVal v As String): m_D4_CauseEchappee = v: End Property
+Public Property Get D4_Date() As Date: D4_Date = m_D4_Date: End Property
+Public Property Let D4_Date(ByVal v As Date): m_D4_Date = v: End Property
+Public Property Get D5_Actions() As String: D5_Actions = m_D5_Actions: End Property
+Public Property Let D5_Actions(ByVal v As String): m_D5_Actions = v: End Property
+Public Property Get D5_Responsable() As String: D5_Responsable = m_D5_Responsable: End Property
+Public Property Let D5_Responsable(ByVal v As String): m_D5_Responsable = v: End Property
+Public Property Get D5_Date() As Date: D5_Date = m_D5_Date: End Property
+Public Property Let D5_Date(ByVal v As Date): m_D5_Date = v: End Property
+Public Property Get D6_Actions() As String: D6_Actions = m_D6_Actions: End Property
+Public Property Let D6_Actions(ByVal v As String): m_D6_Actions = v: End Property
+Public Property Get D6_Date() As Date: D6_Date = m_D6_Date: End Property
+Public Property Let D6_Date(ByVal v As Date): m_D6_Date = v: End Property
+Public Property Get D6_Validation() As String: D6_Validation = m_D6_Validation: End Property
+Public Property Let D6_Validation(ByVal v As String): m_D6_Validation = v: End Property
+Public Property Get D7_Actions() As String: D7_Actions = m_D7_Actions: End Property
+Public Property Let D7_Actions(ByVal v As String): m_D7_Actions = v: End Property
+Public Property Get D7_Date() As Date: D7_Date = m_D7_Date: End Property
+Public Property Let D7_Date(ByVal v As Date): m_D7_Date = v: End Property
+Public Property Get D8_Date() As Date: D8_Date = m_D8_Date: End Property
+Public Property Let D8_Date(ByVal v As Date): m_D8_Date = v: End Property
+Public Property Get D8_Bilan() As String: D8_Bilan = m_D8_Bilan: End Property
+Public Property Let D8_Bilan(ByVal v As String): m_D8_Bilan = v: End Property
+Public Property Get DateCreation() As Date: DateCreation = m_DateCreation: End Property
+Public Property Let DateCreation(ByVal v As Date): m_DateCreation = v: End Property
+
+Public Sub InitNew()
+    m_Id = NewGuid()
+    m_DateCreation = Now
+    m_Statut = "Ouvert"
+End Sub
+
+Public Sub AssignNumero()
+    Dim dom As Object, root As Object, yr As String
+    Dim fname As String, item As Object, numeroNode As Object
+    Dim maxN As Long, parts() As String, n As Long
+    fname = DataPath() & "huitd.xml"
+    yr = Format$(Year(Date), "0000")
+    If Dir(fname) <> "" Then
+        Set dom = CreateObject("MSXML2.DOMDocument.6.0")
+        dom.async = False
+        If dom.Load(fname) Then
+            Set root = dom.documentElement
+            For Each item In root.ChildNodes
+                Set numeroNode = item.selectSingleNode("Numero")
+                If Not numeroNode Is Nothing Then
+                    parts = Split(numeroNode.Text, "-")
+                    If UBound(parts) >= 2 Then
+                        If parts(1) = yr Then
+                            n = CLng(Val(parts(2)))
+                            If n > maxN Then maxN = n
+                        End If
+                    End If
+                End If
+            Next item
+        End If
+    End If
+    m_Numero = "8D-" & yr & "-" & Format$(maxN + 1, "000")
+End Sub
+
+Public Function EtapeCourante() As String
+    If IsDate(m_D8_Date) Then EtapeCourante = "D8" Else
+    If IsDate(m_D7_Date) Then EtapeCourante = "D7" Else
+    If IsDate(m_D6_Date) Then EtapeCourante = "D6" Else
+    If IsDate(m_D5_Date) Then EtapeCourante = "D5" Else
+    If IsDate(m_D4_Date) Then EtapeCourante = "D4" Else
+    If IsDate(m_D3_Date) Then EtapeCourante = "D3" Else
+    If IsDate(m_D2_Date) Then EtapeCourante = "D2" Else
+        EtapeCourante = "D1"
+End Function
+
+Public Function Validate() As Boolean
+    If Len(m_NcId) = 0 Then Exit Function
+    If Len(Trim$(m_D2_Description)) = 0 Then Exit Function
+    If Len(Trim$(m_D4_CauseRacine)) = 0 Then Exit Function
+    Validate = True
+End Function

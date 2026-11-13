@@ -1,0 +1,50 @@
+Option Explicit
+' Contrôles : lblResume, lstNotifs, cmdOuvrir, cmdActualiser, cmdFermer
+
+Private m_Notifs As Collection
+
+Private Sub UserForm_Initialize()
+    Caption = "Centre de notifications"
+    cmdOuvrir.Caption = "Ouvrir l'élément": cmdActualiser.Caption = "Actualiser"
+    cmdFermer.Caption = T("btn.close")
+    With lstNotifs: .ColumnCount = 4: .ColumnWidths = "60;80;200;280": End With
+    RefreshNotifs
+End Sub
+
+Private Sub RefreshNotifs()
+    Set m_Notifs = CollecterNotifications()
+    lstNotifs.Clear
+    Dim i As Long, n As Object, sevStr As String
+    For i = 1 To m_Notifs.Count
+        Set n = m_Notifs(i)
+        Select Case n("Severite")
+            Case NotifCritique: sevStr = "!!!"
+            Case NotifAvertissement: sevStr = "!!"
+            Case Else: sevStr = "i"
+        End Select
+        lstNotifs.AddItem sevStr
+        lstNotifs.List(lstNotifs.ListCount - 1, 1) = n("Categorie")
+        lstNotifs.List(lstNotifs.ListCount - 1, 2) = n("Titre")
+        lstNotifs.List(lstNotifs.ListCount - 1, 3) = n("Detail")
+    Next i
+    If m_Notifs.Count = 0 Then
+        lblResume.Caption = "Aucune alerte — tout est sous contrôle."
+    Else
+        Dim nCrit As Long, nAvert As Long, nInfo As Long
+        nCrit = CompterParSeverite(m_Notifs, NotifCritique)
+        nAvert = CompterParSeverite(m_Notifs, NotifAvertissement)
+        nInfo = CompterParSeverite(m_Notifs, NotifInfo)
+        lblResume.Caption = m_Notifs.Count & " alerte(s) — " & nCrit & " critique(s), " & nAvert & " avertissement(s), " & nInfo & " info(s)"
+    End If
+End Sub
+
+Private Sub cmdActualiser_Click(): RefreshNotifs: End Sub
+
+Private Sub cmdOuvrir_Click()
+    Dim idx As Long: idx = lstNotifs.ListIndex
+    If idx < 0 Then Exit Sub
+    Dim n As Object: Set n = m_Notifs(idx + 1)
+    OuvrirObjetDepuisNotif n("Action"), n("ObjetId")
+End Sub
+
+Private Sub cmdFermer_Click(): Unload Me: End Sub

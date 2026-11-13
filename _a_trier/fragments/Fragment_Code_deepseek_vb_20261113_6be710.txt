@@ -1,0 +1,3 @@
+    ' Mode de données
+    result.Add EvaluerKpi("Mode données", IIf(g_Config.DataMode = "SQL", 1, 0), 1, "Haut", _
+        " (" & g_Config.DataMode & ")")

@@ -1,0 +1,5 @@
+If CStr(props(i)) = "Collection" Then
+    v = rs("CollectionName")
+Else
+    v = rs(CStr(props(i)))
+End If

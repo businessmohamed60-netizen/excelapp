@@ -1,0 +1,112 @@
+Option Explicit
+' Contrôles : lstDossiers, cboClient, txtPiece, txtRefPiece, txtNumSoumission,
+'             cboNiveau, cboStatut, txtDateSoumission, txtDateAcceptation,
+'             chkEl1..chkEl18, lblTaux, cmdNew, cmdSave, cmdDelete, cmdPSW, cmdClose
+
+Private m_Dossiers As Object, m_Clients As Object, m_ClientIds As Object, m_Current As CPpapDossier
+
+Private Sub UserForm_Initialize()
+    Caption = "Dossiers PPAP"
+    cmdNew.Caption = T("btn.new"): cmdSave.Caption = T("btn.save")
+    cmdDelete.Caption = T("btn.delete"): cmdPSW.Caption = "Générer PSW"
+    cmdClose.Caption = T("btn.close")
+    With cboNiveau: .Clear: .AddItem "1": .AddItem "2": .AddItem "3": .AddItem "4": .AddItem "5": End With
+    With cboStatut: .Clear: .AddItem "En préparation": .AddItem "Soumis": .AddItem "Accepté": .AddItem "Refusé": End With
+    LoadClients: RefreshList
+End Sub
+
+Private Sub LoadClients()
+    Set m_Clients = g_CollMgr.LoadCollection("clients")
+    Set m_ClientIds = CreateObject("Scripting.Dictionary")
+    cboClient.Clear
+    Dim k As Variant
+    For Each k In m_Clients.Keys
+        cboClient.AddItem m_Clients(k).DisplayName
+        m_ClientIds.Add m_Clients(k).DisplayName, k
+    Next k
+End Sub
+
+Private Sub RefreshList()
+    Set m_Dossiers = g_CollMgr.LoadCollection("ppap")
+    lstDossiers.Clear
+    Dim k As Variant
+    For Each k In m_Dossiers.Keys
+        lstDossiers.AddItem m_Dossiers(k).Reference & " | " & m_Dossiers(k).Piece & " (Niv. " & m_Dossiers(k).NiveauPpap & ")"
+    Next k
+End Sub
+
+Private Sub lstDossiers_Click()
+    Dim idx As Long: idx = lstDossiers.ListIndex
+    If idx < 0 Then Exit Sub
+    Dim k As Variant, i As Long
+    i = 0
+    For Each k In m_Dossiers.Keys
+        If i = idx Then Set m_Current = m_Dossiers(k): LoadForm: Exit Sub
+        i = i + 1
+    Next k
+End Sub
+
+Private Sub LoadForm()
+    If m_Current Is Nothing Then Exit Sub
+    If m_Clients.Exists(m_Current.ClientId) Then cboClient.Text = m_Clients(m_Current.ClientId).DisplayName
+    txtPiece.Text = m_Current.Piece: txtRefPiece.Text = m_Current.ReferencePiece
+    txtNumSoumission.Text = m_Current.NumeroSoumission
+    cboNiveau.Text = CStr(m_Current.NiveauPpap): cboStatut.Text = m_Current.Statut
+    If m_Current.DateSoumission > 0 Then txtDateSoumission.Text = FormatIsoDate(m_Current.DateSoumission) Else txtDateSoumission.Text = ""
+    If m_Current.DateAcceptation > 0 Then txtDateAcceptation.Text = FormatIsoDate(m_Current.DateAcceptation) Else txtDateAcceptation.Text = ""
+    Dim i As Long
+    For i = 1 To 18: Me.Controls("chkEl" & i).Value = m_Current.Element(i): Next i
+    lblTaux.Caption = "Conformité : " & Format$(m_Current.TauxConformite() * 100, "0") & "% (" & m_Current.NbElementsFournis() & "/18)"
+End Sub
+
+Private Sub cmdNew_Click()
+    Set m_Current = New CPpapDossier: m_Current.InitNew
+    txtPiece.Text = "": txtRefPiece.Text = "": txtNumSoumission.Text = ""
+    cboNiveau.Text = "3": cboStatut.Text = "En préparation"
+    txtDateSoumission.Text = "": txtDateAcceptation.Text = ""
+    Dim i As Long
+    For i = 1 To 18: Me.Controls("chkEl" & i).Value = False: Next i
+    lblTaux.Caption = "Conformité : 0%"
+End Sub
+
+Private Sub cmdSave_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    If Not m_ClientIds.Exists(cboClient.Text) Then ShowError "Validation", "Client obligatoire.": Exit Sub
+    m_Current.ClientId = m_ClientIds(cboClient.Text): m_Current.Piece = txtPiece.Text
+    m_Current.ReferencePiece = txtRefPiece.Text: m_Current.NumeroSoumission = txtNumSoumission.Text
+    m_Current.NiveauPpap = CLng(Val(cboNiveau.Text)): m_Current.Statut = cboStatut.Text
+    If Len(txtDateSoumission.Text) > 0 Then m_Current.DateSoumission = ParseIsoDate(txtDateSoumission.Text)
+    If Len(txtDateAcceptation.Text) > 0 Then m_Current.DateAcceptation = ParseIsoDate(txtDateAcceptation.Text)
+    Dim i As Long
+    For i = 1 To 18: m_Current.Element(i) = (Me.Controls("chkEl" & i).Value = True): Next i
+    If Len(m_Current.Reference) = 0 Then m_Current.AssignReference()
+    If Not m_Current.Validate() Then ShowError "Validation", "Données invalides.": Exit Sub
+    g_CollMgr.Save m_Current, "ppap": g_CollMgr.InvalidateCache "ppap"
+    RefreshList: LoadForm
+    Exit Sub
+ErrHandler:
+    LogEx "FPpap", "cmdSave_Click", Err: ShowError "Sauvegarde", Err.Description
+End Sub
+
+Private Sub cmdDelete_Click()
+    If m_Current Is Nothing Then Exit Sub
+    If Not PromptYesNo("Suppression", T("msg.confirm_delete")) Then Exit Sub
+    g_CollMgr.DeleteById m_Current.Id, "ppap": g_CollMgr.InvalidateCache "ppap"
+    Set m_Current = Nothing: RefreshList
+End Sub
+
+Private Sub cmdPSW_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    If Len(m_Current.Reference) = 0 Then ShowError "PSW", "Enregistrez le dossier.": Exit Sub
+    If Not m_Clients.Exists(m_Current.ClientId) Then ShowError "PSW", "Client introuvable.": Exit Sub
+    Dim client As CClient: Set client = m_Clients(m_Current.ClientId)
+    Dim path As String: path = GenererPSW(m_Current, client)
+    If PromptYesNo("PSW", "Fichier : " & path & vbCrLf & "L'ouvrir ?") Then Workbooks.Open path
+    Exit Sub
+ErrHandler:
+    LogEx "FPpap", "cmdPSW_Click", Err: ShowError "PSW", Err.Description
+End Sub
+
+Private Sub cmdClose_Click(): Unload Me: End Sub

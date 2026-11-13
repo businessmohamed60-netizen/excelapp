@@ -1,0 +1,192 @@
+Attribute VB_Name = "M_Kpi"
+Option Explicit
+
+' ============================================================
+' M_Kpi — Calcul des indicateurs qualité et tendances
+' ============================================================
+
+Public Type TKpi
+    Nom As String
+    Valeur As Double
+    Unite As String
+    Cible As Double
+    Sens As String              ' "Haut" = plus haut mieux, "Bas" = plus bas mieux
+    Statut As String            ' OK / Alerte / Critique / N/A
+    Tendance As String          ' ↑ / ↓ / → / N/A
+    DeltaMoisPrecedent As Double
+End Type
+
+' Calcule un KPI à partir d'une valeur, d'une cible et d'un sens
+Public Function EvaluerKpi(ByVal nom As String, ByVal valeur As Double, _
+                           ByVal cible As Double, ByVal sens As String, _
+                           Optional ByVal unite As String = "") As TKpi
+    Dim r As TKpi
+    r.Nom = nom
+    r.Valeur = valeur
+    r.Cible = cible
+    r.Sens = sens
+    r.Unite = unite
+
+    If sens = "Haut" Then
+        If valeur >= cible Then
+            r.Statut = "OK"
+        ElseIf valeur >= cible * 0.8 Then
+            r.Statut = "Alerte"
+        Else
+            r.Statut = "Critique"
+        End If
+    Else ' Bas
+        If valeur <= cible Then
+            r.Statut = "OK"
+        ElseIf valeur <= cible * 1.2 Then
+            r.Statut = "Alerte"
+        Else
+            r.Statut = "Critique"
+        End If
+    End If
+    EvaluerKpi = r
+End Function
+
+' Tendance par rapport à une valeur de référence (mois précédent)
+Public Function CalculerTendance(ByVal courant As Double, ByVal precedent As Double, _
+                                 ByVal sens As String) As String
+    Dim delta As Double
+    delta = courant - precedent
+    If Abs(delta) < 0.0001 Then
+        CalculerTendance = "→"
+    ElseIf delta > 0 Then
+        If sens = "Haut" Then CalculerTendance = "↑" Else CalculerTendance = "↓"
+    Else
+        If sens = "Haut" Then CalculerTendance = "↓" Else CalculerTendance = "↑"
+    End If
+End Function
+
+' Calcule les 12 KPI du tableau de bord
+Public Function CalculerTousKpi(ByVal annee As Long) As Collection
+    Dim result As New Collection
+    Dim clients As Object, audits As Object, constats As Object
+    Dim ncs As Object, capas As Object, huitds As Object
+    Dim programmes As Object, documents As Object, exigences As Object
+
+    Set clients = g_CollMgr.LoadCollection("clients")
+    Set audits = g_CollMgr.LoadCollection("audits")
+    Set constats = g_CollMgr.LoadCollection("constats")
+    Set ncs = g_CollMgr.LoadCollection("nc")
+    Set capas = g_CollMgr.LoadCollection("capa")
+    Set huitds = g_CollMgr.LoadCollection("huitd")
+    Set programmes = g_CollMgr.LoadCollection("auditprogramme")
+    Set documents = g_CollMgr.LoadCollection("document")
+    Set exigences = g_CollMgr.LoadCollection("exigence")
+
+    Dim k As Variant
+    Dim nbAuditsAnnee As Long, nbAuditsClotures As Long
+    Dim nbNcOuvertes As Long, nbNcTotal As Long, nbNcCloturees As Long
+    Dim nbCapaRetard As Long, nbCapaTotal As Long, nbCapaCloturees As Long
+    Dim nb8dOuverts As Long, nb8dClotures As Long
+    Dim nbProgPlanifies As Long, nbProgRealises As Long, nbProgEnRetard As Long
+    Dim nbDocApprouves As Long, nbDocRevueEchue As Long
+    Dim nbExigNonConf As Long, nbExigApplicables As Long
+
+    ' Audits
+    For Each k In audits.Keys
+        If Year(audits(k).DateDebut) = annee Then
+            nbAuditsAnnee = nbAuditsAnnee + 1
+            If audits(k).Statut = "Clôturé" Then nbAuditsClotures = nbAuditsClotures + 1
+        End If
+    Next k
+
+    ' NC
+    For Each k In ncs.Keys
+        nbNcTotal = nbNcTotal + 1
+        If ncs(k).Statut <> "Clôturée" Then nbNcOuvertes = nbNcOuvertes + 1
+        If ncs(k).Statut = "Clôturée" Then nbNcCloturees = nbNcCloturees + 1
+    Next k
+
+    ' CAPA
+    For Each k In capas.Keys
+        nbCapaTotal = nbCapaTotal + 1
+        If capas(k).EstEnRetard() Then nbCapaRetard = nbCapaRetard + 1
+        If capas(k).Statut = "Clôturée" Then nbCapaCloturees = nbCapaCloturees + 1
+    Next k
+
+    ' 8D
+    For Each k In huitds.Keys
+        If IsDate(huitds(k).D8_Date) And huitds(k).D8_Date > 0 Then
+            nb8dClotures = nb8dClotures + 1
+        Else
+            nb8dOuverts = nb8dOuverts + 1
+        End If
+    Next k
+
+    ' Programme d'audit
+    For Each k In programmes.Keys
+        If programmes(k).Annee = annee Then
+            If programmes(k).Statut = "Planifié" Then
+                nbProgPlanifies = nbProgPlanifies + 1
+                If programmes(k).EstEnRetard() Then nbProgEnRetard = nbProgEnRetard + 1
+            ElseIf programmes(k).Statut = "Réalisé" Then
+                nbProgRealises = nbProgRealises + 1
+            End If
+        End If
+    Next k
+
+    ' Documents
+    For Each k In documents.Keys
+        If documents(k).Statut = "Approuvé" Then nbDocApprouves = nbDocApprouves + 1
+        If documents(k).RevueEchue() Then nbDocRevueEchue = nbDocRevueEchue + 1
+    Next k
+
+    ' Exigences
+    For Each k In exigences.Keys
+        If exigences(k).Applicable Then
+            nbExigApplicables = nbExigApplicables + 1
+            If exigences(k).EstNonConforme() Then nbExigNonConf = nbExigNonConf + 1
+        End If
+    Next k
+
+    ' Construction des KPI
+    result.Add EvaluerKpi("Taux de clôture audits", _
+        IIf(nbAuditsAnnee > 0, nbAuditsClotures / nbAuditsAnnee * 100, 0), 90, "Haut", "%")
+    result.Add EvaluerKpi("NC ouvertes", nbNcOuvertes, 5, "Bas", "")
+    result.Add EvaluerKpi("Taux de clôture NC", _
+        IIf(nbNcTotal > 0, nbNcCloturees / nbNcTotal * 100, 0), 85, "Haut", "%")
+    result.Add EvaluerKpi("CAPA en retard", nbCapaRetard, 2, "Bas", "")
+    result.Add EvaluerKpi("Taux de clôture CAPA", _
+        IIf(nbCapaTotal > 0, nbCapaCloturees / nbCapaTotal * 100, 0), 85, "Haut", "%")
+    result.Add EvaluerKpi("8D ouverts", nb8dOuverts, 3, "Bas", "")
+    result.Add EvaluerKpi("Taux de clôture 8D", _
+        IIf(nb8dOuverts + nb8dClotures > 0, nb8dClotures / (nb8dOuverts + nb8dClotures) * 100, 0), 80, "Haut", "%")
+    result.Add EvaluerKpi("Programme : réalisés", _
+        IIf(nbProgPlanifies + nbProgRealises > 0, nbProgRealises / (nbProgPlanifies + nbProgRealises) * 100, 0), 90, "Haut", "%")
+    result.Add EvaluerKpi("Audits en retard", nbProgEnRetard, 0, "Bas", "")
+    result.Add EvaluerKpi("Documents approuvés", nbDocApprouves, 1, "Haut", "")
+    result.Add EvaluerKpi("Revues documentaires échues", nbDocRevueEchue, 0, "Bas", "")
+    result.Add EvaluerKpi("Exigences non conformes", nbExigNonConf, 0, "Bas", _
+        "/" & nbExigApplicables & " applicables")
+
+    Set CalculerTousKpi = result
+End Function
+
+' Compte les activités du mois pour un type donné (pour tendances)
+Public Function CompterActivitesMois(ByVal typeActivite As String, _
+                                     ByVal annee As Long, ByVal mois As Long) As Long
+    Dim coll As Object, k As Variant, n As Long
+    Dim d As Date
+    Select Case typeActivite
+        Case "audit": Set coll = g_CollMgr.LoadCollection("audits")
+        Case "nc": Set coll = g_CollMgr.LoadCollection("nc")
+        Case "capa": Set coll = g_CollMgr.LoadCollection("capa")
+        Case "8d": Set coll = g_CollMgr.LoadCollection("huitd")
+        Case Else: Exit Function
+    End Select
+    For Each k In coll.Keys
+        Select Case typeActivite
+            Case "audit": d = coll(k).DateDebut
+            Case "nc": d = coll(k).DateDetection
+            Case "capa": d = coll(k).DateOuverture
+            Case "8d": d = coll(k).DateCreation
+        End Select
+        If Year(d) = annee And Month(d) = mois Then n = n + 1
+    Next k
+    CompterActivitesMois = n
+End Function

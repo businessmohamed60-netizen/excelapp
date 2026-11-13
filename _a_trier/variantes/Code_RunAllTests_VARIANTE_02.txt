@@ -1,0 +1,11 @@
+Public Sub RunAllTests()
+    T_Repository
+    T_Client
+    T_Audit
+    T_Constat
+    RunUtilsTests
+    T_NonConformite
+    T_Capa
+    T_8D
+    MsgBox "Tests terminés — voir Immediate Window.", vbInformation
+End Sub

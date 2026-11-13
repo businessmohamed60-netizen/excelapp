@@ -1,0 +1,20 @@
+        Case "CFournisseur"
+            DomainProperties = Array("Id", "Code", "RaisonSociale", "Siret", "Adresse", "Contact", "Telephone", "Email", "Categorie", "Critique", "Statut", "NoteGlobale", "NoteQualite", "NoteLivraison", "NoteReactivite", "NotePrix", "DateDerniereEvaluation", "ProchaineEvaluation", "EstCertifie", "Certification", "DateCertification", "DateExpirationCertification", "Commentaire", "DateCreation")
+        Case "CEvaluationFournisseur"
+            DomainProperties = Array("Id", "FournisseurId", "DateEvaluation", "Periode", "NoteQualite", "NoteLivraison", "NoteReactivite", "NotePrix", "NoteGlobale", "NbNonConformites", "NbRetards", "NbReclamations", "Evaluateur", "PlanAction", "Statut", "Commentaire", "DateCreation")
+        Case "CAuditFournisseur"
+            DomainProperties = Array("Id", "FournisseurId", "Reference", "TypeAudit", "DateAudit", "Auditeur", "Score", "NbMajeurs", "NbMineurs", "NbObservations", "Conclusion", "PlanAction", "Statut", "DateCloture", "Commentaire", "DateCreation")
+        Case "CEquipement"
+            DomainProperties = Array("Id", "Code", "Designation", "TypeEquipement", "Marque", "Modele", "NumeroSerie", "Localisation", "DateMiseEnService", "ValeurAcquisition", "Critique", "Statut", "Responsable", "TempsOuverturePlanifie", "TempsArretPlanifie", "TempsArretNonPlanifie", "TempsProduction", "PiecesProduites", "PiecesBonnes", "DateDerniereMaintenance", "ProchaineMaintenance", "Commentaire", "DateCreation")
+        Case "CMaintenancePreventive"
+            DomainProperties = Array("Id", "EquipementId", "Designation", "TypeMaintenance", "PeriodiciteJours", "Operations", "Responsable", "DureeEstimeeHeures", "PiecesRechange", "DateDerniere", "ProchaineDate", "Statut", "Commentaire", "DateCreation")
+        Case "CInterventionMaintenance"
+            DomainProperties = Array("Id", "EquipementId", "MaintenanceId", "DateIntervention", "TypeIntervention", "Description", "Technicien", "DureeHeures", "PiecesUtilisees", "CoutMainOeuvre", "CoutPieces", "CoutTotal", "Resultat", "Commentaire", "DateCreation")
+        Case "CRejetInterne"
+            DomainProperties = Array("Id", "Numero", "DateRejet", "ClientId", "Produit", "ReferenceProduit", "Lot", "Operation", "TypeRejet", "Description", "QuantiteRejetee", "QuantiteTotale", "CoutUnitaire", "CoutTotal", "CauseProbable", "ActionImmediate", "Statut", "NcId", "DetectePar", "DateCloture", "Commentaire", "DateCreation")
+        Case "CAnalyseRejet"
+            DomainProperties = Array("Id", "Periode", "DateDebut", "DateFin", "TypeAnalyse", "Resultats", "DateCreation")
+        Case "CPlanSurveillance"
+            DomainProperties = Array("Id", "Reference", "ClientId", "Produit", "Processus", "Responsable", "DateCreation", "DateRevue", "Version", "Statut", "Approbateur", "DateApprobation", "Commentaire")
+        Case "CLigneSurveillance"
+            DomainProperties = Array("Id", "PlanId", "NumeroLigne", "Caracteristique", "TypeCaracteristique", "Specification", "Tolerance", "Frequence", "TailleEchantillon", "MoyenControle", "Enregistrement", "ReactionNC", "StatutCar", "DateCreation")

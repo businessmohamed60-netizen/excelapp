@@ -1,0 +1,5 @@
+        Case "amdec":            Set CreateEmpty = New CAMDEC
+        Case "ligneamdec":       Set CreateEmpty = New CLigneAMDEC
+        Case "plancontrole":     Set CreateEmpty = New CPlanControle
+        Case "ligneplan":        Set CreateEmpty = New CLignePlan
+        Case "caracteristique":  Set CreateEmpty = New CCaracteristique

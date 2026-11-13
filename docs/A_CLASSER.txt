@@ -1,0 +1,1 @@
+Les éléments dans _a_trier/ ont été conservés sans conversion automatique car leur nom indique un fragment, une variante ou un contenu dont le type VBA exact n'est pas garanti.

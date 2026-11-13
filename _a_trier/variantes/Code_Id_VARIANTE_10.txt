@@ -1,0 +1,234 @@
+Option Explicit
+
+Private m_Id As String
+Private m_Reference As String
+Private m_ClientId As String
+Private m_Caracteristique As String
+Private m_Unite As String
+Private m_LimiteSpecInf As Double
+Private m_LimiteSpecSup As Double
+Private m_TailleSousGroupe As Long
+Private m_Mesures As Collection
+Private m_DateCreation As Date
+
+Public Property Get Id() As String: Id = m_Id: End Property
+Public Property Let Id(ByVal v As String): m_Id = v: End Property
+Public Property Get Reference() As String: Reference = m_Reference: End Property
+Public Property Let Reference(ByVal v As String): m_Reference = v: End Property
+Public Property Get ClientId() As String: ClientId = m_ClientId: End Property
+Public Property Let ClientId(ByVal v As String): m_ClientId = v: End Property
+Public Property Get Caracteristique() As String: Caracteristique = m_Caracteristique: End Property
+Public Property Let Caracteristique(ByVal v As String): m_Caracteristique = v: End Property
+Public Property Get Unite() As String: Unite = m_Unite: End Property
+Public Property Let Unite(ByVal v As String): m_Unite = v: End Property
+Public Property Get LimiteSpecInf() As Double: LimiteSpecInf = m_LimiteSpecInf: End Property
+Public Property Let LimiteSpecInf(ByVal v As Double): m_LimiteSpecInf = v: End Property
+Public Property Get LimiteSpecSup() As Double: LimiteSpecSup = m_LimiteSpecSup: End Property
+Public Property Let LimiteSpecSup(ByVal v As Double): m_LimiteSpecSup = v: End Property
+Public Property Get TailleSousGroupe() As Long: TailleSousGroupe = m_TailleSousGroupe: End Property
+Public Property Let TailleSousGroupe(ByVal v As Long): m_TailleSousGroupe = v: End Property
+Public Property Get Mesures() As Collection: Set Mesures = m_Mesures: End Property
+Public Property Get DateCreation() As Date: DateCreation = m_DateCreation: End Property
+Public Property Let DateCreation(ByVal v As Date): m_DateCreation = v: End Property
+
+Private Sub Class_Initialize()
+    Set m_Mesures = New Collection
+    m_TailleSousGroupe = 5
+End Sub
+
+Public Sub InitNew()
+    m_Id = NewGuid()
+    m_DateCreation = Now
+End Sub
+
+Public Sub AssignReference()
+    Dim dom As Object, root As Object, yr As String
+    Dim fname As String, item As Object, numeroNode As Object
+    Dim maxN As Long, parts() As String, n As Long
+    fname = DataPath() & "spc.xml"
+    yr = Format$(Year(Date), "0000")
+    If Dir(fname) <> "" Then
+        Set dom = CreateObject("MSXML2.DOMDocument.6.0")
+        dom.async = False
+        If dom.Load(fname) Then
+            Set root = dom.documentElement
+            For Each item In root.ChildNodes
+                Set numeroNode = item.selectSingleNode("Reference")
+                If Not numeroNode Is Nothing Then
+                    parts = Split(numeroNode.Text, "-")
+                    If UBound(parts) >= 2 Then
+                        If parts(1) = yr Then
+                            n = CLng(Val(parts(2)))
+                            If n > maxN Then maxN = n
+                        End If
+                    End If
+                End If
+            Next item
+        End If
+    End If
+    m_Reference = "SPC-" & yr & "-" & Format$(maxN + 1, "000")
+End Sub
+
+Public Function NbSousGroupes() As Long
+    If m_TailleSousGroupe > 0 Then NbSousGroupes = m_Mesures.Count \ m_TailleSousGroupe
+End Function
+
+Public Function MoyennesSousGroupes() As Variant
+    Dim n As Long, k As Long, i As Long, j As Long, m() As Double
+    n = NbSousGroupes
+    ReDim m(0 To n - 1)
+    k = 1
+    For i = 0 To n - 1
+        Dim buf() As Double: ReDim buf(0 To m_TailleSousGroupe - 1)
+        For j = 0 To m_TailleSousGroupe - 1
+            buf(j) = m_Mesures(k): k = k + 1
+        Next j
+        m(i) = Moyenne(buf)
+    Next i
+    MoyennesSousGroupes = m
+End Function
+
+Public Function EtenduesSousGroupes() As Variant
+    Dim n As Long, i As Long, j As Long, r() As Double, k As Long
+    n = NbSousGroupes
+    ReDim r(0 To n - 1)
+    k = 1
+    For i = 0 To n - 1
+        Dim buf() As Double: ReDim buf(0 To m_TailleSousGroupe - 1)
+        For j = 0 To m_TailleSousGroupe - 1
+            buf(j) = m_Mesures(k): k = k + 1
+        Next j
+        r(i) = Etendue(buf)
+    Next i
+    EtenduesSousGroupes = r
+End Function
+
+Public Function MoyenneGenerale() As Double
+    Dim arr() As Double, i As Long
+    If m_Mesures.Count = 0 Then Exit Function
+    ReDim arr(0 To m_Mesures.Count - 1)
+    For i = 1 To m_Mesures.Count: arr(i - 1) = m_Mesures(i): Next i
+    MoyenneGenerale = Moyenne(arr)
+End Function
+
+Public Function EtendueMoyenne() As Double
+    Dim r As Variant, i As Long, s As Double
+    r = EtenduesSousGroupes()
+    If UBound(r) < LBound(r) Then Exit Function
+    For i = LBound(r) To UBound(r): s = s + r(i): Next i
+    EtendueMoyenne = s / (UBound(r) - LBound(r) + 1)
+End Function
+
+Public Function SigmaEstime() As Double
+    Dim d2 As Double
+    Select Case m_TailleSousGroupe
+        Case 2: d2 = 1.128: Case 3: d2 = 1.693: Case 4: d2 = 2.059
+        Case 5: d2 = 2.326: Case 6: d2 = 2.534: Case 7: d2 = 2.704
+        Case 8: d2 = 2.847: Case 9: d2 = 2.97: Case 10: d2 = 3.078
+        Case Else: d2 = 2.326
+    End Select
+    If d2 > 0 Then SigmaEstime = EtendueMoyenne() / d2
+End Function
+
+Public Function SigmaGlobal() As Double
+    Dim arr() As Double, i As Long
+    If m_Mesures.Count < 2 Then Exit Function
+    ReDim arr(0 To m_Mesures.Count - 1)
+    For i = 1 To m_Mesures.Count: arr(i - 1) = m_Mesures(i): Next i
+    SigmaGlobal = EcartType(arr, True)
+End Function
+
+Public Function Cp() As Double
+    If LimiteSpecSup() = 0 Or LimiteSpecInf() = 0 Then Exit Function
+    If SigmaEstime() = 0 Then Exit Function
+    Cp = (LimiteSpecSup() - LimiteSpecInf()) / (6 * SigmaEstime())
+End Function
+
+Public Function Cpk() As Double
+    If SigmaEstime() = 0 Then Exit Function
+    Dim c1 As Double, c2 As Double, mg As Double
+    mg = MoyenneGenerale()
+    c1 = (LimiteSpecSup() - mg) / (3 * SigmaEstime())
+    c2 = (mg - LimiteSpecInf()) / (3 * SigmaEstime())
+    Cpk = c1: If c2 < c1 Then Cpk = c2
+End Function
+
+Public Function Pp() As Double
+    If LimiteSpecSup() = 0 Or LimiteSpecInf() = 0 Then Exit Function
+    If SigmaGlobal() = 0 Then Exit Function
+    Pp = (LimiteSpecSup() - LimiteSpecInf()) / (6 * SigmaGlobal())
+End Function
+
+Public Function Ppk() As Double
+    If SigmaGlobal() = 0 Then Exit Function
+    Dim c1 As Double, c2 As Double, mg As Double
+    mg = MoyenneGenerale()
+    c1 = (LimiteSpecSup() - mg) / (3 * SigmaGlobal())
+    c2 = (mg - LimiteSpecInf()) / (3 * SigmaGlobal())
+    Ppk = c1: If c2 < c1 Then Ppk = c2
+End Function
+
+Public Function ReglesNelson() As Variant
+    Dim moyennes As Variant, mg As Double, sigma As Double
+    Dim violations As Collection, i As Long, j As Long, n As Long
+    moyennes = MoyennesSousGroupes()
+    If UBound(moyennes) < LBound(moyennes) Then ReglesNelson = Array(): Exit Function
+    mg = MoyenneGenerale(): sigma = SigmaEstime()
+    If sigma = 0 Then ReglesNelson = Array(): Exit Function
+    Set violations = New Collection
+    n = UBound(moyennes) - LBound(moyennes) + 1
+    ' R1 : 1 point > 3σ
+    For i = 0 To n - 1
+        If Abs(moyennes(i) - mg) > 3 * sigma Then violations.Add "R1@" & (i + 1)
+    Next i
+    ' R2 : 2 points sur 3 au-delà de 2σ
+    For i = 0 To n - 3
+        Dim count As Long, cote As Long
+        count = 0
+        For j = i To i + 2
+            If Abs(moyennes(j) - mg) > 2 * sigma Then
+                count = count + 1
+                If count = 1 Then cote = Sgn(moyennes(j) - mg)
+            End If
+        Next j
+        If count >= 2 Then violations.Add "R2@" & (i + 1)
+    Next i
+    ' R3 : 4 points sur 5 au-delà de 1σ
+    For i = 0 To n - 5
+        Dim c3 As Long, cote3 As Long
+        c3 = 0: cote3 = 0
+        For j = i To i + 4
+            If Abs(moyennes(j) - mg) > 1 * sigma Then
+                If c3 = 0 Then cote3 = Sgn(moyennes(j) - mg)
+                If Sgn(moyennes(j) - mg) = cote3 Then c3 = c3 + 1
+            End If
+        Next j
+        If c3 >= 4 Then violations.Add "R3@" & (i + 1)
+    Next i
+    ' R4 : 8 points du même côté
+    For i = 0 To n - 8
+        Dim side As Long, c4 As Long
+        side = 0: c4 = 0
+        For j = i To i + 7
+            If side = 0 Then side = Sgn(moyennes(j) - mg)
+            If Sgn(moyennes(j) - mg) = side Then c4 = c4 + 1
+        Next j
+        If c4 = 8 Then violations.Add "R4@" & (i + 1)
+    Next i
+    Dim out() As String, k As Long
+    If violations.Count = 0 Then
+        ReglesNelson = Array()
+    Else
+        ReDim out(0 To violations.Count - 1)
+        For k = 1 To violations.Count: out(k - 1) = violations(k): Next k
+        ReglesNelson = out
+    End If
+End Function
+
+Public Function Validate() As Boolean
+    If Len(m_ClientId) = 0 Then Exit Function
+    If Len(Trim$(m_Caracteristique)) = 0 Then Exit Function
+    If m_TailleSousGroupe < 2 Or m_TailleSousGroupe > 10 Then Exit Function
+    If m_Mesures.Count < m_TailleSousGroupe * 2 Then Exit Function
+    Validate = True
+End Function

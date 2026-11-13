@@ -1,0 +1,16 @@
+        Case "CAuditProgramme"
+            DomainProperties = Array("Id", "Annee", "ClientId", "Processus", _
+                "TypeAudit", "Risque", "FrequenceMois", "DatePrevue", _
+                "DateRealisee", "AuditId", "Auditeur", "Statut", _
+                "Commentaire", "DateCreation")
+        Case "CDocument"
+            DomainProperties = Array("Id", "Code", "Titre", "TypeDoc", _
+                "Version", "Statut", "Redacteur", "Approbateur", _
+                "DateCreation", "DateApprobation", "DateRevuePrevue", _
+                "DateRevueRealisee", "Processus", "CheminFichier", _
+                "Commentaire")
+        Case "CExigence"
+            DomainProperties = Array("Id", "Reference", "Source", "ClientId", _
+                "Intitule", "Chapitre", "Applicable", "Conformite", _
+                "Preuve", "Responsable", "DateEvaluation", "DateRevue", _
+                "Commentaire", "DateCreation")

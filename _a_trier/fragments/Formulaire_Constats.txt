@@ -1,0 +1,120 @@
+Option Explicit
+' Contrôles : cboClient, txtProcessus, cboTypeAudit, cboNorme, txtDateDebut,
+'             txtDateFin, txtAuditeur, cboStatut, txtScore, lstAudits,
+'             cmdNew, cmdSave, cmdDelete, cmdConstats, cmdRapport, cmdClose, lblStatus
+
+Private m_Audits As Object, m_Clients As Object, m_Current As CAudit
+Private m_ClientIds As Object
+
+Private Sub UserForm_Initialize()
+    Caption = T("menu.audits")
+    cmdNew.Caption = T("btn.new"): cmdSave.Caption = T("btn.save")
+    cmdDelete.Caption = T("btn.delete"): cmdClose.Caption = T("btn.close")
+    cmdConstats.Caption = "Constats...": cmdRapport.Caption = "Générer rapport"
+    InitCombos: RefreshList
+End Sub
+
+Private Sub InitCombos()
+    With cboTypeAudit: .Clear: .AddItem "Interne": .AddItem "Processus": .AddItem "Fournisseur": .AddItem "Client": .AddItem "Certification": End With
+    With cboNorme: .Clear: .AddItem "IATF 16949": .AddItem "ISO 9001": .AddItem "VDA 6.3": End With
+    With cboStatut: .Clear: .AddItem "Planifié": .AddItem "En cours": .AddItem "Clôturé": End With
+    Set m_Clients = g_CollMgr.LoadCollection("clients")
+    Set m_ClientIds = CreateObject("Scripting.Dictionary")
+    cboClient.Clear
+    Dim k As Variant
+    For Each k In m_Clients.Keys
+        cboClient.AddItem m_Clients(k).DisplayName
+        m_ClientIds.Add m_Clients(k).DisplayName, k
+    Next k
+End Sub
+
+Private Sub RefreshList()
+    Set m_Audits = g_CollMgr.LoadCollection("audits")
+    lstAudits.Clear
+    Dim k As Variant
+    For Each k In m_Audits.Keys
+        lstAudits.AddItem FormatIsoDate(m_Audits(k).DateDebut) & " | " & m_Audits(k).Processus & " | " & m_Audits(k).Statut
+    Next k
+    lblStatus.Caption = m_Audits.Count & " audit(s)"
+End Sub
+
+Private Sub lstAudits_Click()
+    Dim idx As Long: idx = lstAudits.ListIndex
+    If idx < 0 Then Exit Sub
+    Dim k As Variant, i As Long
+    i = 0
+    For Each k In m_Audits.Keys
+        If i = idx Then Set m_Current = m_Audits(k): LoadForm: Exit Sub
+        i = i + 1
+    Next k
+End Sub
+
+Private Sub LoadForm()
+    If m_Current Is Nothing Then Exit Sub
+    If m_Clients.Exists(m_Current.ClientId) Then cboClient.Text = m_Clients(m_Current.ClientId).DisplayName
+    txtProcessus.Text = m_Current.Processus
+    cboTypeAudit.Text = m_Current.TypeAudit: cboNorme.Text = m_Current.Norme
+    txtDateDebut.Text = FormatIsoDate(m_Current.DateDebut)
+    txtDateFin.Text = FormatIsoDate(m_Current.DateFin)
+    txtAuditeur.Text = m_Current.Auditeur: cboStatut.Text = m_Current.Statut
+    txtScore.Text = CStr(m_Current.Score)
+End Sub
+
+Private Sub cmdNew_Click()
+    Set m_Current = New CAudit: m_Current.InitNew
+    txtProcessus.Text = "": txtAuditeur.Text = "": txtScore.Text = "0"
+    txtDateDebut.Text = FormatIsoDate(Date): txtDateFin.Text = FormatIsoDate(Date)
+    cboStatut.Text = "Planifié"
+End Sub
+
+Private Sub cmdSave_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    If Not m_ClientIds.Exists(cboClient.Text) Then ShowError "Validation", "Client obligatoire.": Exit Sub
+    m_Current.ClientId = m_ClientIds(cboClient.Text)
+    m_Current.Processus = txtProcessus.Text: m_Current.TypeAudit = cboTypeAudit.Text
+    m_Current.Norme = cboNorme.Text: m_Current.DateDebut = ParseIsoDate(txtDateDebut.Text)
+    m_Current.DateFin = ParseIsoDate(txtDateFin.Text): m_Current.Auditeur = txtAuditeur.Text
+    m_Current.Statut = cboStatut.Text: m_Current.Score = Val(txtScore.Text)
+    If Not m_Current.Validate() Then ShowError "Validation", "Données invalides.": Exit Sub
+    g_CollMgr.Save m_Current, "audits": g_CollMgr.InvalidateCache "audits"
+    RefreshList
+    Exit Sub
+ErrHandler:
+    LogEx "FAudit", "cmdSave_Click", Err: ShowError "Sauvegarde", Err.Description
+End Sub
+
+Private Sub cmdDelete_Click()
+    If m_Current Is Nothing Then Exit Sub
+    If Not PromptYesNo("Suppression", T("msg.confirm_delete")) Then Exit Sub
+    g_CollMgr.DeleteById m_Current.Id, "audits"
+    g_CollMgr.InvalidateCache "audits"
+    Set m_Current = Nothing: RefreshList
+End Sub
+
+Private Sub cmdConstats_Click()
+    If m_Current Is Nothing Then ShowError "Constats", "Sélectionnez un audit.": Exit Sub
+    If Len(m_Current.Id) = 0 Then ShowError "Constats", "Enregistrez l'audit d'abord.": Exit Sub
+    Dim f As FConstat: Set f = New FConstat
+    f.AuditCourant = m_Current.Id: f.Show vbModal
+End Sub
+
+Private Sub cmdRapport_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    If Len(m_Current.ClientId) = 0 Then ShowError "Rapport", "Aucun client lié.": Exit Sub
+    Dim client As CClient: Set client = m_Clients(m_Current.ClientId)
+    Dim allK As Object, filtered As Object, k As Variant
+    Set allK = g_CollMgr.LoadCollection("constats")
+    Set filtered = CreateObject("Scripting.Dictionary")
+    For Each k In allK.Keys
+        If allK(k).AuditId = m_Current.Id Then filtered.Add k, allK(k)
+    Next k
+    Dim path As String: path = GenererRapportAudit(m_Current, client, filtered)
+    If PromptYesNo("Rapport", "Rapport créé :" & vbCrLf & path & vbCrLf & "L'ouvrir ?") Then Workbooks.Open path
+    Exit Sub
+ErrHandler:
+    LogEx "FAudit", "cmdRapport_Click", Err: ShowError "Rapport", Err.Description
+End Sub
+
+Private Sub cmdClose_Click(): Unload Me: End Sub

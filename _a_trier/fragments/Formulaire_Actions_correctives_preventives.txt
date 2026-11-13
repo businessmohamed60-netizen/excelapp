@@ -1,0 +1,89 @@
+Option Explicit
+' Contrôles : lstCapas, cboType, txtDescription, txtResponsable,
+'             txtDateOuverture, txtDateEcheance, txtDateRealisation,
+'             cboEfficacite, cboStatut, cmdNew, cmdSave, cmdDelete, cmdClose, lblStatus
+
+Private m_NcId As String, m_Capas As Object, m_Filtered As Object, m_Current As CCapa
+
+Public Property Let NcCourante(ByVal id As String): m_NcId = id: End Property
+
+Private Sub UserForm_Initialize()
+    Caption = "Actions correctives / préventives"
+    cmdNew.Caption = T("btn.new"): cmdSave.Caption = T("btn.save")
+    cmdDelete.Caption = T("btn.delete"): cmdClose.Caption = T("btn.close")
+    With cboType: .Clear: .AddItem "Corrective": .AddItem "Préventive": .AddItem "Amélioration": End With
+    With cboEfficacite: .Clear: .AddItem "À vérifier": .AddItem "Efficace": .AddItem "Non efficace": End With
+    With cboStatut: .Clear: .AddItem "Ouverte": .AddItem "En cours": .AddItem "Réalisée": .AddItem "Vérifiée": .AddItem "Clôturée": End With
+    With lstCapas: .ColumnCount = 3: .ColumnWidths = "80;120;90": End With
+    RefreshList
+End Sub
+
+Private Sub RefreshList()
+    Set m_Capas = g_CollMgr.LoadCollection("capa")
+    Set m_Filtered = CreateObject("Scripting.Dictionary")
+    lstCapas.Clear
+    Dim k As Variant
+    For Each k In m_Capas.Keys
+        If m_Capas(k).NcId = m_NcId Then
+            m_Filtered.Add k, k
+            lstCapas.AddItem m_Capas(k).Numero
+            lstCapas.List(lstCapas.ListCount - 1, 1) = m_Capas(k).TypeAction
+            lstCapas.List(lstCapas.ListCount - 1, 2) = m_Capas(k).Statut
+        End If
+    Next k
+    lblStatus.Caption = m_Filtered.Count & " CAPA"
+End Sub
+
+Private Sub lstCapas_Click()
+    Dim idx As Long: idx = lstCapas.ListIndex
+    If idx < 0 Then Exit Sub
+    Dim k As Variant, i As Long
+    i = 0
+    For Each k In m_Filtered.Keys
+        If i = idx Then Set m_Current = m_Capas(k): LoadForm: Exit Sub
+        i = i + 1
+    Next k
+End Sub
+
+Private Sub LoadForm()
+    If m_Current Is Nothing Then Exit Sub
+    cboType.Text = m_Current.TypeAction: txtDescription.Text = m_Current.Description
+    txtResponsable.Text = m_Current.Responsable: txtDateOuverture.Text = FormatIsoDate(m_Current.DateOuverture)
+    txtDateEcheance.Text = FormatIsoDate(m_Current.DateEcheance)
+    If m_Current.DateRealisation > 0 Then txtDateRealisation.Text = FormatIsoDate(m_Current.DateRealisation) Else txtDateRealisation.Text = ""
+    cboEfficacite.Text = m_Current.Efficacite: cboStatut.Text = m_Current.Statut
+End Sub
+
+Private Sub cmdNew_Click()
+    Set m_Current = New CCapa: m_Current.InitNew
+    m_Current.NcId = m_NcId
+    cboType.Text = "Corrective": txtDescription.Text = "": txtResponsable.Text = ""
+    txtDateOuverture.Text = FormatIsoDate(Date): txtDateEcheance.Text = FormatIsoDate(Date + 30)
+    txtDateRealisation.Text = "": cboEfficacite.Text = "À vérifier": cboStatut.Text = "Ouverte"
+End Sub
+
+Private Sub cmdSave_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    m_Current.TypeAction = cboType.Text: m_Current.Description = txtDescription.Text
+    m_Current.Responsable = txtResponsable.Text: m_Current.DateOuverture = ParseIsoDate(txtDateOuverture.Text)
+    m_Current.DateEcheance = ParseIsoDate(txtDateEcheance.Text)
+    If Len(txtDateRealisation.Text) > 0 Then m_Current.DateRealisation = ParseIsoDate(txtDateRealisation.Text)
+    m_Current.Efficacite = cboEfficacite.Text: m_Current.Statut = cboStatut.Text
+    If Len(m_Current.Numero) = 0 Then m_Current.AssignNumero()
+    If Not m_Current.Validate() Then ShowError "Validation", "Description et dates obligatoires.": Exit Sub
+    g_CollMgr.Save m_Current, "capa": g_CollMgr.InvalidateCache "capa"
+    RefreshList
+    Exit Sub
+ErrHandler:
+    LogEx "FCapa", "cmdSave_Click", Err: ShowError "Sauvegarde", Err.Description
+End Sub
+
+Private Sub cmdDelete_Click()
+    If m_Current Is Nothing Then Exit Sub
+    If Not PromptYesNo("Suppression", T("msg.confirm_delete")) Then Exit Sub
+    g_CollMgr.DeleteById m_Current.Id, "capa": g_CollMgr.InvalidateCache "capa"
+    Set m_Current = Nothing: RefreshList
+End Sub
+
+Private Sub cmdClose_Click(): Unload Me: End Sub

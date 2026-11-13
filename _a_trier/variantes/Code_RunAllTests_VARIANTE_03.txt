@@ -1,0 +1,9 @@
+Public Sub RunAllTests()
+    ' ... 24 suites Phases 2-7 ...
+    T_Db
+    T_Migration
+    T_KpiSql
+    T_Api
+    T_DbConcurrency
+    MsgBox "Tests terminés — 29 suites.", vbInformation
+End Sub

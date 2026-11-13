@@ -1,0 +1,28 @@
+        Case "CAMDEC"
+            DomainProperties = Array("Id", "Reference", "TypeAmdec", "ClientId", _
+                "Processus", "Produit", "Responsable", "Equipe", "DateCreation", _
+                "DateRevue", "Version", "Statut", "Approbateur", _
+                "DateApprobation", "Commentaire")
+        Case "CLigneAMDEC"
+            DomainProperties = Array("Id", "AmdecId", "NumeroLigne", _
+                "EtapeProcessus", "Fonction", "ModeDefaillance", "Effet", _
+                "Gravite", "Cause", "Occurrence", "ControlesPreventifs", _
+                "Detection", "ControlesDetectifs", "Rpn", "Criticite", _
+                "ActionRecommandee", "ResponsableAction", "DateEcheanceAction", _
+                "DateRealisationAction", "StatutAction", "GraviteApres", _
+                "OccurrenceApres", "DetectionApres", "RpnApres", "DateCreation")
+        Case "CPlanControle"
+            DomainProperties = Array("Id", "Reference", "ClientId", "Produit", _
+                "Processus", "Responsable", "DateCreation", "DateRevue", _
+                "Version", "Statut", "Approbateur", "DateApprobation", "Commentaire")
+        Case "CLignePlan"
+            DomainProperties = Array("Id", "PlanId", "NumeroLigne", "Etape", _
+                "Caracteristique", "CaracteristiqueId", "TypeCaracteristique", _
+                "Specification", "MoyenControle", "Frequence", "TailleEchantillon", _
+                "CritereAcceptation", "Responsable", "Enregistrement", _
+                "ReactionNonConformite", "DateCreation")
+        Case "CCaracteristique"
+            DomainProperties = Array("Id", "Code", "Libelle", "TypeCar", _
+                "ClientId", "Produit", "Specification", "Tolerance", _
+                "SymboleClient", "AmdecId", "LigneAmdecId", "PlanControleId", _
+                "Statut", "DateCreation", "Commentaire")

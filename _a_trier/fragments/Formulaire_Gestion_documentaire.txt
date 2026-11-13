@@ -1,0 +1,79 @@
+Option Explicit
+
+Private m_Docs As Object
+Private m_FilteredKeys As Object
+Private m_Current As CDocument
+Private m_DocManager As CDocManager
+
+Private Sub UserForm_Initialize()
+    Caption = "Gestion documentaire"
+    cmdNouveau.Caption = "Nouveau"
+    cmdEnregistrer.Caption = "Enregistrer"
+    cmdSupprimer.Caption = "Supprimer"
+    cmdVersions.Caption = "Versions..."
+    cmdChangerStatut.Caption = "Changer statut..."
+    cmdFiche.Caption = "Fiche de vie"
+    cmdFermer.Caption = T("btn.close")
+    Set m_DocManager = New CDocManager
+    InitCombos
+    RefreshList
+End Sub
+
+Private Sub InitCombos()
+    With cboTypeDoc
+        .Clear: .AddItem "Procédure": .AddItem "Instruction"
+        .AddItem "Formulaire": .AddItem "Enregistrement"
+        .AddItem "Politique": .AddItem "Manuel"
+    End With
+    With cboProcessus
+        .Clear: .AddItem "Production": .AddItem "Qualité": .AddItem "Logistique"
+        .AddItem "Achats": .AddItem "Maintenance": .AddItem "RH": .AddItem "Direction"
+    End With
+    With cboStatut
+        .Clear: .AddItem "Brouillon": .AddItem "En revue": .AddItem "Approuvé"
+        .AddItem "Publié": .AddItem "Obsolète": .AddItem "Archivé"
+    End With
+    With cboFiltreStatut
+        .Clear: .AddItem "Tous": .AddItem "Brouillon": .AddItem "En revue"
+        .AddItem "Approuvé": .AddItem "Publié": .AddItem "Obsolète": .AddItem "Archivé"
+        .Text = "Tous"
+    End With
+    With cboFiltreType
+        .Clear: .AddItem "Tous": .AddItem "Procédure": .AddItem "Instruction"
+        .AddItem "Formulaire": .AddItem "Enregistrement": .AddItem "Politique": .AddItem "Manuel"
+        .Text = "Tous"
+    End With
+End Sub
+
+Private Sub RefreshList()
+    Set m_Docs = g_CollMgr.LoadCollection("documents")
+    Set m_FilteredKeys = CreateObject("Scripting.Dictionary")
+    lstDocuments.Clear
+    With lstDocuments
+        .ColumnCount = 6
+        .ColumnWidths = "25;90;220;80;70;100"
+    End With
+    Dim k As Variant, d As CDocument
+    Dim q As String: q = LCase$(Trim$(txtRecherche.Text))
+    For Each k In m_Docs.Keys
+        Set d = m_Docs(k)
+        ' Filtres
+        If cboFiltreStatut.Text <> "Tous" And d.Statut <> cboFiltreStatut.Text Then GoTo NextDoc
+        If cboFiltreType.Text <> "Tous" And d.TypeDoc <> cboFiltreType.Text Then GoTo NextDoc
+        If Len(q) > 0 Then
+            If InStr(LCase$(d.Code & " " & d.Titre & " " & d.MotsCles & " " & d.Description), q) = 0 Then GoTo NextDoc
+        End If
+        m_FilteredKeys.Add k, k
+        lstDocuments.AddItem IndicateurStatut(d.Statut)
+        lstDocuments.List(lstDocuments.ListCount - 1, 1) = d.Code
+        lstDocuments.List(lstDocuments.ListCount - 1, 2) = d.Titre
+        lstDocuments.List(lstDocuments.ListCount - 1, 3) = d.TypeDoc
+        lstDocuments.List(lstDocuments.ListCount - 1, 4) = d.Statut
+        lstDocuments.List(lstDocuments.ListCount - 1, 5) = d.StatutRevue()
+NextDoc:
+    Next k
+    lblStatus.Caption = m_FilteredKeys.Count & " document(s) sur " & m_Docs.Count
+End Sub
+
+Private Sub lstDocuments_Click()
+    Dim idx As Long: idx = lst

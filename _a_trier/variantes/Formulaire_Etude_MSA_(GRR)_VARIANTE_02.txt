@@ -1,0 +1,115 @@
+Option Explicit
+' Contrôles : lstEtudes, cboClient, txtMoyenMesure, txtCaracteristique, txtTolerance,
+'             txtNbPieces, txtNbOperateurs, txtNbEssais,
+'             lblEV, lblAV, lblGRR, lblPV, lblNdc, lblVerdict,
+'             cmdNew, cmdSave, cmdSaisir, cmdCalculer, cmdRapport, cmdClose
+
+Private m_Etudes As Object, m_Clients As Object, m_ClientIds As Object, m_Current As CMsaEtude
+
+Private Sub UserForm_Initialize()
+    Caption = "Étude MSA (GRR)"
+    cmdNew.Caption = T("btn.new"): cmdSave.Caption = T("btn.save")
+    cmdSaisir.Caption = "Saisir les mesures": cmdCalculer.Caption = "Calculer"
+    cmdRapport.Caption = "Rapport GRR": cmdClose.Caption = T("btn.close")
+    LoadClients: RefreshList
+End Sub
+
+Private Sub LoadClients()
+    Set m_Clients = g_CollMgr.LoadCollection("clients")
+    Set m_ClientIds = CreateObject("Scripting.Dictionary")
+    cboClient.Clear
+    Dim k As Variant
+    For Each k In m_Clients.Keys
+        cboClient.AddItem m_Clients(k).DisplayName
+        m_ClientIds.Add m_Clients(k).DisplayName, k
+    Next k
+End Sub
+
+Private Sub RefreshList()
+    Set m_Etudes = g_CollMgr.LoadCollection("msa")
+    lstEtudes.Clear
+    Dim k As Variant
+    For Each k In m_Etudes.Keys
+        lstEtudes.AddItem m_Etudes(k).Reference & " | " & m_Etudes(k).Caracteristique
+    Next k
+End Sub
+
+Private Sub lstEtudes_Click()
+    Dim idx As Long: idx = lstEtudes.ListIndex
+    If idx < 0 Then Exit Sub
+    Dim k As Variant, i As Long
+    i = 0
+    For Each k In m_Etudes.Keys
+        If i = idx Then Set m_Current = m_Etudes(k): LoadForm: Exit Sub
+        i = i + 1
+    Next k
+End Sub
+
+Private Sub LoadForm()
+    If m_Current Is Nothing Then Exit Sub
+    If m_Clients.Exists(m_Current.ClientId) Then cboClient.Text = m_Clients(m_Current.ClientId).DisplayName
+    txtMoyenMesure.Text = m_Current.MoyenMesure: txtCaracteristique.Text = m_Current.Caracteristique
+    txtTolerance.Text = CStr(m_Current.Tolerance)
+    txtNbPieces.Text = CStr(m_Current.NbPieces): txtNbOperateurs.Text = CStr(m_Current.NbOperateurs)
+    txtNbEssais.Text = CStr(m_Current.NbEssais)
+End Sub
+
+Private Sub cmdNew_Click()
+    Set m_Current = New CMsaEtude: m_Current.InitNew
+    cboClient.ListIndex = -1: txtMoyenMesure.Text = "": txtCaracteristique.Text = ""
+    txtTolerance.Text = "": txtNbPieces.Text = "10": txtNbOperateurs.Text = "3": txtNbEssais.Text = "3"
+End Sub
+
+Private Sub cmdSave_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    If Not m_ClientIds.Exists(cboClient.Text) Then ShowError "Validation", "Client obligatoire.": Exit Sub
+    m_Current.ClientId = m_ClientIds(cboClient.Text)
+    m_Current.MoyenMesure = txtMoyenMesure.Text: m_Current.Caracteristique = txtCaracteristique.Text
+    m_Current.Tolerance = CDbl(Replace(txtTolerance.Text, ",", "."))
+    m_Current.NbPieces = CLng(txtNbPieces.Text): m_Current.NbOperateurs = CLng(txtNbOperateurs.Text)
+    m_Current.NbEssais = CLng(txtNbEssais.Text)
+    If Len(m_Current.Reference) = 0 Then m_Current.AssignReference()
+    If Not m_Current.Validate() Then ShowError "Validation", "Données incomplètes.": Exit Sub
+    g_CollMgr.Save m_Current, "msa": g_CollMgr.InvalidateCache "msa"
+    RefreshList: LoadForm
+    Exit Sub
+ErrHandler:
+    LogEx "FMsa", "cmdSave_Click", Err: ShowError "Sauvegarde", Err.Description
+End Sub
+
+Private Sub cmdSaisir_Click()
+    If m_Current Is Nothing Then Exit Sub
+    Dim p As Long
+    For p = 1 To m_Current.NbPieces
+        Dim f As FSaisieGrr: Set f = New FSaisieGrr
+        f.Piece = p: Set f.Etude = m_Current: f.Show vbModal
+    Next p
+End Sub
+
+Private Sub cmdCalculer_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    If m_Current.Mesures.Count = 0 Then ShowError "Calcul", "Aucune mesure.": Exit Sub
+    lblEV.Caption = "%EV = " & Format$(m_Current.PourcentEV(), "0.0") & " %"
+    lblAV.Caption = "%AV = " & Format$(m_Current.PourcentAV(), "0.0") & " %"
+    lblGRR.Caption = "%GRR = " & Format$(m_Current.PourcentGRR(), "0.0") & " %"
+    lblPV.Caption = "%PV = " & Format$(m_Current.PourcentPV(), "0.0") & " %"
+    lblNdc.Caption = "ndc = " & Format$(m_Current.NombreDistinctCategorie(), "0.0")
+    lblVerdict.Caption = "Verdict : " & m_Current.Verdict()
+    Exit Sub
+ErrHandler:
+    LogEx "FMsa", "cmdCalculer_Click", Err: ShowError "Calcul", Err.Description
+End Sub
+
+Private Sub cmdRapport_Click()
+    On Error GoTo ErrHandler
+    If m_Current Is Nothing Then Exit Sub
+    Dim path As String: path = GenererRapportGRR(m_Current)
+    If PromptYesNo("Rapport GRR", "Fichier : " & path & vbCrLf & "L'ouvrir ?") Then Workbooks.Open path
+    Exit Sub
+ErrHandler:
+    LogEx "FMsa", "cmdRapport_Click", Err: ShowError "Rapport", Err.Description
+End Sub
+
+Private Sub cmdClose_Click(): Unload Me: End Sub

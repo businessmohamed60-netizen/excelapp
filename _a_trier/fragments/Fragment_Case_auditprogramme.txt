@@ -1,0 +1,3 @@
+        Case "auditprogramme": Set CreateEmpty = New CAuditProgramme
+        Case "document":       Set CreateEmpty = New CDocument
+        Case "exigence":       Set CreateEmpty = New CExigence

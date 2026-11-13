@@ -1,0 +1,16 @@
+<tab id="tabModules" label="Modules IATF">
+  <group id="grpFournisseurs" label="Fournisseurs">
+    <button id="btnFournisseurs" label="Fournisseurs" size="large" onAction="Rb_Fournisseurs"/>
+    <button id="btnAuditsFourn" label="Audits fournisseurs" size="large" onAction="Rb_AuditsFournisseurs"/>
+  </group>
+  <group id="grpTPM" label="TPM">
+    <button id="btnEquipements" label="Équipements" size="large" onAction="Rb_Equipements"/>
+    <button id="btnMaintenance" label="Maintenance" size="large" onAction="Rb_Maintenance"/>
+  </group>
+  <group id="grpRejets" label="Rejets">
+    <button id="btnRejets" label="Rejets internes" size="large" onAction="Rb_Rejets"/>
+  </group>
+  <group id="grpSurveillance" label="Surveillance">
+    <button id="btnSurveillance" label="Plans de surveillance" size="large" onAction="Rb_Surveillance"/>
+  </group>
+</tab>

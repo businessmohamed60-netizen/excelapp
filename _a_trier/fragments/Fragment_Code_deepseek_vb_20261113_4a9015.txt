@@ -1,0 +1,13 @@
+    ' Vérifier qu'aucun 8D n'existe déjà pour cette NC
+    Dim huitds As Object, kk As Variant
+    Set huitds = g_CollMgr.LoadCollection("huitd")
+    For Each kk In huitds.Keys
+        If huitds(kk).NcId = m_Current.Id Then
+            ShowInfo "8D", "Un 8D existe déjà pour cette NC (" & huitds(kk).Numero & ")."
+            Dim fEx As F8D
+            Set fEx = New F8D
+            fEx.NcCourante = m_Current.Id
+            fEx.Show vbModal
+            Exit Sub
+        End If
+    Next kk

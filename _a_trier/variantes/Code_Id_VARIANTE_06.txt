@@ -1,0 +1,57 @@
+Option Explicit
+
+Private m_Id As String
+Private m_Code As String
+Private m_RaisonSociale As String
+Private m_Secteur As String
+Private m_ContactNom As String
+Private m_ContactEmail As String
+Private m_ContactTel As String
+Private m_Adresse As String
+Private m_Pays As String
+Private m_Norme As String
+Private m_Actif As Boolean
+Private m_DateCreation As Date
+
+Public Property Get Id() As String: Id = m_Id: End Property
+Public Property Let Id(ByVal v As String): m_Id = v: End Property
+Public Property Get Code() As String: Code = m_Code: End Property
+Public Property Let Code(ByVal v As String): m_Code = v: End Property
+Public Property Get RaisonSociale() As String: RaisonSociale = m_RaisonSociale: End Property
+Public Property Let RaisonSociale(ByVal v As String): m_RaisonSociale = v: End Property
+Public Property Get Secteur() As String: Secteur = m_Secteur: End Property
+Public Property Let Secteur(ByVal v As String): m_Secteur = v: End Property
+Public Property Get ContactNom() As String: ContactNom = m_ContactNom: End Property
+Public Property Let ContactNom(ByVal v As String): m_ContactNom = v: End Property
+Public Property Get ContactEmail() As String: ContactEmail = m_ContactEmail: End Property
+Public Property Let ContactEmail(ByVal v As String): m_ContactEmail = v: End Property
+Public Property Get ContactTel() As String: ContactTel = m_ContactTel: End Property
+Public Property Let ContactTel(ByVal v As String): m_ContactTel = v: End Property
+Public Property Get Adresse() As String: Adresse = m_Adresse: End Property
+Public Property Let Adresse(ByVal v As String): m_Adresse = v: End Property
+Public Property Get Pays() As String: Pays = m_Pays: End Property
+Public Property Let Pays(ByVal v As String): m_Pays = v: End Property
+Public Property Get Norme() As String: Norme = m_Norme: End Property
+Public Property Let Norme(ByVal v As String): m_Norme = v: End Property
+Public Property Get Actif() As Boolean: Actif = m_Actif: End Property
+Public Property Let Actif(ByVal v As Boolean): m_Actif = v: End Property
+Public Property Get DateCreation() As Date: DateCreation = m_DateCreation: End Property
+Public Property Let DateCreation(ByVal v As Date): m_DateCreation = v: End Property
+
+Public Sub InitNew()
+    m_Id = NewGuid()
+    m_DateCreation = Now
+    m_Actif = True
+    m_Norme = "IATF 16949"
+    m_Pays = "France"
+End Sub
+
+Public Function Validate() As Boolean
+    If Len(Trim$(m_RaisonSociale)) = 0 Then Exit Function
+    If Len(Trim$(m_Code)) = 0 Then Exit Function
+    Validate = True
+End Function
+
+Public Function DisplayName() As String
+    DisplayName = m_Code & " — " & m_RaisonSociale
+End Function

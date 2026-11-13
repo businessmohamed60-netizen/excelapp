@@ -1,0 +1,35 @@
+        Case "CMoyenMesure"
+            DomainProperties = Array("Id", "Code", "Designation", "TypeMoyen", _
+                "Marque", "Modele", "NumeroSerie", "Localisation", "ClientId", _
+                "EtendueMesure", "Resolution", "Incertitude", "PeriodiciteMois", _
+                "DateMiseEnService", "DernierEtalonnage", "ProchainEtalonnage", _
+                "Statut", "Responsable", "Commentaire", "DateCreation")
+        Case "CEtalonnage"
+            DomainProperties = Array("Id", "MoyenId", "DateEtalonnage", _
+                "TypeOperation", "Organisme", "CertificatNumero", "Resultat", _
+                "IncertitudeRelevee", "ProchaineEcheance", "Cout", _
+                "Commentaire", "DateCreation")
+        Case "CEtudeMsa"
+            DomainProperties = Array("Id", "Reference", "MoyenId", _
+                "Caracteristique", "ClientId", "NbOperateurs", "NbPieces", _
+                "NbEssais", "Tolerance", "USL", "LSL", "Moyenne", _
+                "EtendueMoyenne", "EcartTypeRepetabilite", _
+                "EcartTypeReproductibilite", "GrR", "PourcentGrR", _
+                "PourcentGrRTolerance", "Ndc", "Statut", "DateEtude", _
+                "Responsable", "Commentaire", "DateCreation")
+        Case "CLigneMsa"
+            DomainProperties = Array("Id", "EtudeId", "Operateur", "Piece", _
+                "Essai", "Valeur", "DateCreation")
+        Case "CEtudeCapabilite"
+            DomainProperties = Array("Id", "Reference", "Caracteristique", _
+                "MoyenId", "ClientId", "USL", "LSL", "Cible", "NbValeurs", _
+                "Moyenne", "EcartTypeCourt", "EcartTypeLong", "Cp", "Cpk", _
+                "Pp", "Ppk", "Statut", "DateEtude", "Responsable", _
+                "Commentaire", "DateCreation")
+        Case "CCarteControle"
+            DomainProperties = Array("Id", "Reference", "Caracteristique", _
+                "MoyenId", "TypeCarte", "SousGroupeTaille", "USL", "LSL", _
+                "Cible", "LigneCentre", "LimiteSup", "LimiteInf", _
+                "LigneCentreR", "LimiteSupR", "LimiteInfR", "NbSousGroupes", _
+                "Statut", "DateEtude", "Responsable", "Commentaire", _
+                "DateCreation")
